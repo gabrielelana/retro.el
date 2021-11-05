@@ -17,4 +17,4 @@ compile:
 clean:
 	${CASK} clean-elc
 
-.PHONY: prepare unit compile clean
+.PHONY: prepare test compile clean

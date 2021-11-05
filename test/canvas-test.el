@@ -27,8 +27,56 @@
 (require 'ert)
 (require 'retro (expand-file-name "./../retro.el"))
 
+(defvar small-canvas (retro-canvas-create :margin-left 0
+                                          :margin-top 0
+                                          :width 2
+                                          :height 2
+                                          :background-color 0))
+
 (ert-deftest canvas-test-create ()
-  (should t))
+  (should (retro-canvas-p small-canvas)))
+
+(ert-deftest canvas-test-copy ()
+  (should (equal small-canvas (retro-canvas-copy small-canvas))))
+
+(ert-deftest canvas-test-create-with-background-color ()
+  (let ((pixels (retro-canvas-pixels small-canvas)))
+    (should (equal 4 (seq-length pixels)))
+    (should (equal 0 (aref pixels 0)))
+    (should (equal 0 (aref pixels 1)))
+    (should (equal 0 (aref pixels 2)))
+    (should (equal 0 (aref pixels 3)))))
+
+(ert-deftest canvas-test-plot-pixel-x-y ()
+  (let* ((canvas (retro-canvas-copy small-canvas))
+         (width (retro-canvas-width canvas))
+         (pixels (retro-canvas-pixels canvas)))
+    (retro--plot-pixel 0 0 1 pixels width)
+    (retro--plot-pixel 1 0 2 pixels width)
+    (retro--plot-pixel 0 1 3 pixels width)
+    (retro--plot-pixel 1 1 4 pixels width)
+    (should (equal 1 (aref pixels 0)))
+    (should (equal 2 (aref pixels 1)))
+    (should (equal 3 (aref pixels 2)))
+    (should (equal 4 (aref pixels 3)))))
+
+(ert-deftest canvas-test-plot-line ()
+  (let* ((canvas (retro-canvas-copy small-canvas))
+         (pixels (retro-canvas-pixels canvas)))
+    (retro--plot-line 0 0 1 1 4 canvas)
+    (should (equal 4 (aref pixels 0)))
+    (should (equal 0 (aref pixels 1)))
+    (should (equal 0 (aref pixels 2)))
+    (should (equal 4 (aref pixels 3)))))
+
+(ert-deftest canvas-test-plot-filled-rectangle ()
+  (let* ((canvas (retro-canvas-copy small-canvas))
+         (pixels (retro-canvas-pixels canvas)))
+    (retro--plot-filled-rectangle 0 0 1 1 4 canvas)
+    (should (equal 4 (aref pixels 0)))
+    (should (equal 4 (aref pixels 1)))
+    (should (equal 4 (aref pixels 2)))
+    (should (equal 4 (aref pixels 3)))))
 
 (provide 'canvas-test)
 
