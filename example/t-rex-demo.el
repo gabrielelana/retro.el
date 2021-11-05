@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t -*-
+
 (require 'retro (expand-file-name "./../retro.el"))
 
 (cl-defstruct (t-rex-sprite (:constructor t-rex-sprite--create)
@@ -17,8 +19,8 @@
 
 (cl-defun t-rex-sprite-create (&key x y ground-y top-y)
   "Create T-Rex."
-  (let ((running-sprite (retro--load-sprite "t-rex-running.sprite" x y))
-        (jumping-sprite (retro--load-sprite "t-rex-jumping.sprite" x y)))
+  (let ((running-sprite (retro--load-sprite "./asset/t-rex-running.sprite" x y))
+        (jumping-sprite (retro--load-sprite "./asset/t-rex-jumping.sprite" x y)))
     (t-rex-sprite--create :running-sprite running-sprite
                           :jumping-sprite jumping-sprite
                           :current-sprite running-sprite
@@ -52,9 +54,7 @@
                           :top-y top-y
                           :dy 0
                           :x x
-                          :y y
-      )))
-
+                          :y y)))
 
 (defun t-rex-demo ()
   "Show a T-Rex running."
@@ -69,7 +69,7 @@
                                           (funcall (t-rex-sprite-jump (nth 2 game-state)) (nth 2 game-state))
                                           )))
                        :init (lambda () (list 0
-                                              (retro--load-background "t-rex-horizon.sprite" width 0 0 (- height 12 1))
+                                              (retro--load-background "./asset/t-rex-horizon.sprite" width 0 0 (- height 12 1))
                                               (t-rex-sprite-create :x 10
                                                                    :y (- height 48)
                                                                    :ground-y (- height 47 2)
@@ -82,5 +82,8 @@
                                  (cl-incf (car game-state)))
                        :render (lambda (game-state canvas)
                                  (retro--plot-background (nth 1 game-state) canvas)
-                                 (funcall (t-rex-sprite-render (nth 2 game-state)) (nth 2 game-state) canvas)
-                                 ))))
+                                 (funcall (t-rex-sprite-render (nth 2 game-state)) (nth 2 game-state) canvas)))))
+
+(defun t-rex-demo-start ()
+  (interactive)
+  (retro--game-loop (t-rex-demo)))

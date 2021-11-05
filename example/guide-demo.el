@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t -*-
+
 (require 'retro (expand-file-name "./../retro.el"))
 
 (defun guide-demo ()
@@ -22,3 +24,7 @@
                                                     (ht-get retro-palette-colors->index "#ffffff")
                                                     (retro-canvas-pixels canvas)
                                                     width)))))
+
+(defun guide-demo-start ()
+  (interactive)
+  (retro--game-loop (guide-demo)))

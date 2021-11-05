@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t -*-
+
 (require 'retro (expand-file-name "./../retro.el"))
 
 (defun bouncing-ball-demo ()
@@ -32,3 +34,7 @@
                                        (x (nth 4 game-state))
                                        (y (nth 5 game-state)))
                                    (retro--plot-filled-rectangle x y (+ x size) (+ y size) 15 canvas))))))
+
+(defun bouncing-ball-demo-start ()
+  (interactive)
+  (retro--game-loop (bouncing-ball-demo)))

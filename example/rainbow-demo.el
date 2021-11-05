@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t -*-
+
 (require 'retro (expand-file-name "./../retro.el"))
 
 (defun rainbow-demo ()
@@ -17,3 +19,7 @@
                                                              (- (retro-canvas-height canvas) 2)
                                                              (1+ (% (car game-state) 15))
                                                              canvas))))
+
+(defun rainbow-demo-start ()
+  (interactive)
+  (retro--game-loop (rainbow-demo)))

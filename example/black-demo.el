@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t -*-
+
 (require 'retro (expand-file-name "./../retro.el"))
 
 (defun black-demo ()
@@ -10,3 +12,7 @@
                                (message "[%03d] elapsed: %fs" (car game-state) elapsed)
                                (setf (car game-state) (1+ (car game-state))))
                      :render (lambda (_game-state _canvas) nil)))
+
+(defun black-demo-start ()
+  (interactive)
+  (retro--game-loop (black-demo)))

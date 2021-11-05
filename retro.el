@@ -741,12 +741,12 @@ TC is the transparent color, a pixel of this color is not copied."
 ;;   (retro--game-loop (walk-demo)))
 
 ;;; TODO:
-;;; - [ ] run examples
 ;;; - [ ] run simple unit tests
 ;;; - [ ] install with straight
 ;;; - [ ] remove everything from local-packages
 ;;; - [ ] remove everything from ~/code/retro.el
 ;;; - [ ] create a .project.org
+;;; - [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates
 ;;; - [ ] add CI
 
 ;;; - [ ] support comment in sprite file

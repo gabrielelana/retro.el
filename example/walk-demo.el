@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t -*-
+
 (require 'retro (expand-file-name "./../retro.el"))
 
 (defun walk-demo ()
@@ -22,9 +24,13 @@
                                                        (setf (nth 2 game-state) t))
                                                      ))
                                ("q" . retro--handle-quit))
-                       :init (lambda () (list 0 (retro--load-sprite "pink_walk.sprite" 10 160) t))
+                       :init (lambda () (list 0 (retro--load-sprite "./asset/pink_walk.sprite" 10 160) t))
                        :update (lambda (_elapsed game-state _canvas)
                                  ;; (message "[%03d] (%d,%d) elapsed: %fs" (nth 0 game-state) (nth 1 game-state) (nth 2 game-state) elapsed)
                                  (cl-incf (car game-state)))
                        :render (lambda (game-state canvas)
                                  (retro--plot-sprite (nth 1 game-state) canvas)))))
+
+(defun walk-demo-start ()
+  (interactive)
+  (retro--game-loop (walk-demo)))
