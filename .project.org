@@ -10,8 +10,8 @@ Longer description of the task
 * Refile
 Tasks to be refiled somewhere else in this project
 
-- [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates
-- [ ] support comment in sprite file
+- [ ] support comment in sprites file
+- [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates :-/
 - [ ] clip sprites when they are partially inside the canvas, do nothing when they are outside
 - [ ] DEMO: walking pink monster with bending space (when goes outside from the right comes back from the left)
 - [ ] scroll background based on time and not fixed amount (100px per second = velocity)?
@@ -27,9 +27,9 @@ Tasks to be refiled somewhere else in this project
 - [ ] learn about defclass and defmethod && how to handle state machines in Common Lisp
 - [ ] support sprites with multiple animations: modes/actions/clips: (name -> frame) -> frames: (index -> pixels) -> pixels: (index -> pixel). add field :current-mode
       #+BEGIN_EXAMPLE
-     >> <NAME> <NUMBER-OF-FRAMES>
-     -- <FRAME-INDEX>
-     <FRAME>
+      >> <NAME> <NUMBER-OF-FRAMES>
+      -- <FRAME-INDEX>
+      <FRAME>
       #+END_EXAMPLE
 - [ ] something for gravity, velocity and damping + ground
 - [ ] render based on time passed (see https://gameprogrammingpatterns.com/game-loop.html)
@@ -37,7 +37,7 @@ Tasks to be refiled somewhere else in this project
 - [ ] loading fonts
 - [ ] track and display the fps somewhere
 - [ ] duff device to plot in buffer to reduce the number of while iterations, define macro (unrolled-times N (V M) BODY) with throw/catch
-- [ ] ~(retro--sprite-flip-v sprite)
+- [ ] ~(retro--sprite-flip-v sprite)~
 - [ ] retro--tile-flip-v
 - [ ] flip-v
 - [ ] fix: how to properly import ht library to make flycheck happy
