@@ -1,0 +1,63 @@
+#+TITLE: retro.el
+
+* XXX-001 Lorem ipsum dolor [0/3]
+Longer description of the task
+
+- [ ] Something to do
+- [ ] Something to do
+- [ ] Something to do
+
+* Refile
+Tasks to be refiled somewhere else in this project
+
+- [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates
+- [ ] support comment in sprite file
+- [ ] clip sprites when they are partially inside the canvas, do nothing when they are outside
+- [ ] DEMO: walking pink monster with bending space (when goes outside from the right comes back from the left)
+- [ ] scroll background based on time and not fixed amount (100px per second = velocity)?
+- [ ] DEMO: t-rex with "smooth" scrolling background
+- [ ] benchmarks of different scenarios to evaluate possible performance improvement strategies
+- [ ] test with calibrate.sprite and clipping with buttercup?
+- [ ] handle mouse click events (keypress . key) || (mouseclick . (x . y))
+- [ ] retro-game macro
+- [ ] game `:update-every <seconds>` to make a fixed tick, use a wrapper function for the given `:update` function
+- [ ] DEMO: game of life (see http://www.conwaylife.com/ref/lexicon/lex.htm or https://www.conwaylife.com/patterns/ for ASCII patterns)
+- [ ] add bounding box to sprite and tiles
+- [ ] learn about game engines (dragonfly book)
+- [ ] learn about defclass and defmethod && how to handle state machines in Common Lisp
+- [ ] support sprites with multiple animations: modes/actions/clips: (name -> frame) -> frames: (index -> pixels) -> pixels: (index -> pixel). add field :current-mode
+      #+BEGIN_EXAMPLE
+     >> <NAME> <NUMBER-OF-FRAMES>
+     -- <FRAME-INDEX>
+     <FRAME>
+      #+END_EXAMPLE
+- [ ] something for gravity, velocity and damping + ground
+- [ ] render based on time passed (see https://gameprogrammingpatterns.com/game-loop.html)
+- [ ] collision detection between elements
+- [ ] loading fonts
+- [ ] track and display the fps somewhere
+- [ ] duff device to plot in buffer to reduce the number of while iterations, define macro (unrolled-times N (V M) BODY) with throw/catch
+- [ ] ~(retro--sprite-flip-v sprite)
+- [ ] retro--tile-flip-v
+- [ ] flip-v
+- [ ] fix: how to properly import ht library to make flycheck happy
+- [ ] garbage collection trick?
+- [ ] extract example and ask for possible improvements on emacs-devel ml
+- [ ] add hook on window resize -> font dimension resize
+- [ ] special mode buffer? create a major mode for retro mode?
+- [ ] major mode for sprite files with instant preview (side by side buffer)
+- [ ] utility to import an image file into a sprite file
+- [ ] game: offline chrome dinosaur
+      - https://github.com/chirag64/t-rex-runner-bot/tree/gh-pages/img
+      - https://github.com/wayou/t-rex-runner/blob/gh-pages/index.js
+- [ ] game: snake
+- [ ] game: flappy bird
+- [ ] game: pico-8 emulator || similar platform
+- [ ] game: space invaders original ROM
+- [ ] game: game boy emulator?
+- [ ] game: processing clone?
+
+* Unrelated
+Tasks unrelated to this project
+
+- [ ] Something to do

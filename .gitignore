@@ -1,0 +1,4 @@
+.cask
+.git
+!.project.org
+!.gitignore

@@ -736,56 +736,6 @@ TC is the transparent color, a pixel of this color is not copied."
 ;;; physics https://www.youtube.com/playlist?list=PLtrSb4XxIVbpZpV65kk73OoUcIrBzoSiO
 ;;; sprite https://penusbmic.itch.io/free-dungeon-ruins-tileset
 
-;;; TODO:
-;;; - [ ] create a .project.org
-;;; - [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates
-;;; - [ ] support comment in sprite file
-;;; - [ ] clip sprites when they are partially inside the canvas, do nothing when they are outside
-;;; - [ ] DEMO: walking pink monster with bending space (when goes outside from the right comes back from the left)
-;;; - [ ] scroll background based on time and not fixed amount (100px per second = velocity)?
-;;; - [ ] DEMO: t-rex with "smooth" scrolling background
-;;; - [ ] benchmarks of different scenarios to evaluate possible performance improvement strategies
-;;; - [ ] test with calibrate.sprite and clipping with buttercup?
-;;; - [ ] handle mouse click events (keypress . key) || (mouseclick . (x . y))
-;;; - [ ] retro-game macro
-;;; - [ ] game `:update-every <seconds>` to make a fixed tick, use a wrapper function for the given `:update` function
-;;; - [ ] DEMO: game of life (see http://www.conwaylife.com/ref/lexicon/lex.htm or https://www.conwaylife.com/patterns/ for ASCII patterns)
-
-;;; - [ ] add bounding box to sprite and tiles
-;;; - [ ] learn about game engines (dragonfly book)
-;;; - [ ] learn about defclass and defmethod && how to handle state machines in Common Lisp
-;;; - [ ] support sprites with multiple animations: modes/actions/clips: (name -> frame) -> frames: (index -> pixels) -> pixels: (index -> pixel). add field :current-mode
-;;;       ```
-;;;       >> <NAME> <NUMBER-OF-FRAMES>
-;;;       -- <FRAME-INDEX>
-;;;       <FRAME>
-;;;       ```
-;;; - [ ] something for gravity, velocity and damping + ground
-;;; - [ ] render based on time passed (see https://gameprogrammingpatterns.com/game-loop.html)
-;;; - [ ] collision detection between elements
-;;; - [ ] loading fonts
-;;; - [ ] track and display the fps somewhere
-;;; - [ ] duff device to plot in buffer to reduce the number of while iterations, define macro (unrolled-times N (V M) BODY) with throw/catch
-;;; - [ ] (retro--sprite-flip-v sprite)
-;;; - [ ] retro--tile-flip-v
-;;; - [ ] flip-v
-;;; - [ ] fix: how to properly import ht library to make flycheck happy
-;;; - [ ] garbage collection trick?
-;;; - [ ] extract example and ask for possible improvements on emacs-devel ml
-;;; - [ ] add hook on window resize -> font dimension resize
-;;; - [ ] special mode buffer? create a major mode for retro mode?
-;;; - [ ] major mode for sprite files with instant preview (side by side buffer)
-;;; - [ ] utility to import an image file into a sprite file
-;;; - [ ] game: offline chrome dinosaur
-;;;         - https://github.com/chirag64/t-rex-runner-bot/tree/gh-pages/img
-;;;         - https://github.com/wayou/t-rex-runner/blob/gh-pages/index.js
-;;; - [ ] game: snake
-;;; - [ ] game: flappy bird
-;;; - [ ] game: pico-8 emulator || similar platform
-;;; - [ ] game: space invaders original ROM
-;;; - [ ] game: game boy emulator?
-;;; - [ ] game: processing clone?
-
 ;; (progn
 ;;   (let ((resolution (cons 5 5))
 ;;         (background-color 15)
