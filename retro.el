@@ -28,7 +28,62 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'ht)
+
+(defgroup retro nil
+  "Library to create retro games."
+  :group 'games)
+
+;;; TODO: documentation
+(defconst retro-palette-size 65536)
+
+;;; TODO: documentation
+(defvar retro-palette-faces (make-vector retro-palette-size 0))
+
+;;; TODO: documentation
+(defvar retro-palette-pointer 0)
+
+;;; TODO: documentation
+(defvar retro-palette-colors->index (ht-create))
+
+;;; TODO: check license of the font
+;;; TODO: find a way to reliably distribute and install the font
+(defvar retro-square-font-family "Kreative Square SM"
+  "Font family used to create the illusion of pixels.")
+
+
+;;; Palette
+
+(defun retro--add-color-to-palette (color)
+  "Add COLOR to palette (if not already present) and return its index."
+  (setq color (downcase color))
+  (if (ht-contains-p retro-palette-colors->index color)
+      (ht-get retro-palette-colors->index color)
+    ;; check if retro-palette-pointer < retro-palette-size
+    (let ((face-name (intern (format "retro-mode-face-%s" (substring color 1)))))
+      (eval `(defface ,face-name
+               '((t :background ,color))
+               ,(format "Face for pixel with color %s" color)
+               :group 'retro-mode))
+      (aset retro-palette-faces retro-palette-pointer face-name)
+      (ht-set! retro-palette-colors->index color retro-palette-pointer)
+      (prog1
+          retro-palette-pointer
+        (setq retro-palette-pointer (1+ retro-palette-pointer))))))
+
+;;; TODO: better initialization, when? eval-after-load?
+(let* ((colors (list "#000000" "#800000" "#008000"
+                     "#808000" "#000080" "#800080"
+                     "#008080" "#c0c0c0" "#808080"
+                     "#ff0000" "#00ff00" "#ffff00"
+                     "#0000ff" "#ff00ff" "#00ffff"
+                     "#ffffff")))
+  (dolist (color colors)
+    (retro--add-color-to-palette color)))
+
+
+;;; Canvas
 
 (cl-defstruct (retro-canvas (:constructor retro-canvas--create)
                             (:copier nil))
@@ -61,146 +116,9 @@
                        :height (retro-canvas-height canvas)
                        :background-color (retro-canvas-background-color canvas)))
 
-(cl-defstruct (retro-tile (:constructor retro--tile-create)
-                          (:copier nil))
-  "Represent a tile in a game."
-  (x 0 :type number)
-  (y 0 :type number)
-  (width 0 :type number)
-  (height 0 :type number)
-  (transparent-color 0 :type number)
-  (pixels nil :type vector))
-
-(cl-defstruct (retro-sprite (:constructor retro--sprite-create)
-                            (:copier nil))
-  "Represent a sprite in a game."
-  (x 0 :type number)
-  (y 0 :type number)
-  (width 0 :type number)
-  (height 0 :type number)
-  (frame-i 0 :type number)
-  (frame-n 0 :type number)
-  (transparent-color 0 :type number)
-  (frames nil :type vector))
-
-(cl-defstruct (retro-game (:constructor retro-game--create)
-                          (:copier nil))
-  "Game."
-  (name nil :type string)
-  (buffer-name nil :type string)
-  (resolution nil :type cons)
-  (bind nil :type list)
-  (init nil :type function)
-  (update nil :type function)
-  (render nil :type function)
-  (quit-p nil :type boolean)
-  (quit nil :type function)
-  (pending-events () :type list)
-  (current-canvas nil :type canvas)
-  (previous-canvas nil :type canvas))
-
-(defun retro--handle-keypress (key game)
-  "Handle pressed key."
-  (lambda ()
-    (interactive)
-    ;; TODO: (keypress . key) when we will handle mouse events
-    (push key (retro-game-pending-events game))))
-
-(defun retro--handle-pending-events (game-state game)
-  "Handle all pending events."
-  (let ((bind (retro-game-bind game))
-        (pending-events (retro-game-pending-events game))
-        (handler nil))
-    (dolist (key (reverse pending-events))
-      (setq handler (alist-get key bind))
-      (if handler
-          (funcall handler game-state game)
-        (user-error "missing handler for key %s" key))))
-  (setf (retro-game-pending-events game) '()))
-
-(defun retro--handle-quit (_game-state game)
-  "Signal the game to quit."
-  (setf (retro-game-quit-p game) t))
-
-(defun retro--normalize-bind (bind)
-  "Normalize bind."
-  (let ((result '())
-        (keys nil)
-        (handler nil))
-    (dolist (e bind result)
-      (setq keys (if (listp (car e)) (car e) (list (car e)))
-            handler (cdr e))
-      (dolist (key keys)
-        (setq result (cons (cons (intern key)
-                                 handler)
-                           result))))))
-
-(cl-defun retro-game-create (&key name resolution bind init update render (background-color 0))
-  "Create GAME."
-  (let* ((original-buffer (current-buffer))
-         (buffer-name (format "*%s-screen*" name))
-         (current-window (get-buffer-window original-buffer))
-         (current-canvas (retro--init-canvas current-window buffer-name (car resolution) (cdr resolution) background-color))
-         (previous-canvas (retro-canvas-copy current-canvas))
-         (keymap (make-sparse-keymap))
-         (bind (retro--normalize-bind bind))
-         (game (retro-game--create :name name
-                                   :buffer-name buffer-name
-                                   :resolution resolution
-                                   :bind bind
-                                   :init init
-                                   :update update
-                                   :render render
-                                   :quit-p nil
-                                   :quit (lambda () (switch-to-buffer original-buffer))
-                                   :pending-events '()
-                                   :current-canvas current-canvas
-                                   :previous-canvas previous-canvas)))
-    (suppress-keymap keymap)
-    (dolist (key (mapcar 'car bind))
-      (define-key keymap (kbd (symbol-name key)) (retro--handle-keypress key game)))
-    (with-current-buffer buffer-name
-      (use-local-map keymap))
-    game))
-
-(defgroup retro-mode nil
-  "Major mode and library to develop retro games."
-  :group 'games)
-
-(defconst retro-palette-size 65536)
-(defvar retro-palette-faces (make-vector retro-palette-size 0))
-(defvar retro-palette-pointer 0)
-(defvar retro-palette-colors->index (ht-create))
-
-(defun retro--add-color-to-palette (color)
-  "Add COLOR to palette (if not already present) and return its index."
-  (setq color (downcase color))
-  (if (ht-contains-p retro-palette-colors->index color)
-      (ht-get retro-palette-colors->index color)
-    ;; check if retro-palette-pointer < retro-palette-size
-    (let ((face-name (intern (format "retro-mode-face-%s" (substring color 1)))))
-      (eval `(defface ,face-name
-               '((t :background ,color))
-               ,(format "Face for pixel with color %s" color)
-               :group 'retro-mode))
-      (aset retro-palette-faces retro-palette-pointer face-name)
-      (ht-set! retro-palette-colors->index color retro-palette-pointer)
-      (prog1
-          retro-palette-pointer
-        (setq retro-palette-pointer (1+ retro-palette-pointer))))))
-
-;;; TODO: better initialization, when? eval-after-load?
-(let* ((colors (list "#000000" "#800000" "#008000"
-                     "#808000" "#000080" "#800080"
-                     "#008080" "#c0c0c0" "#808080"
-                     "#ff0000" "#00ff00" "#ffff00"
-                     "#0000ff" "#ff00ff" "#00ffff"
-                     "#ffffff")))
-  (dolist (color colors)
-    (retro--add-color-to-palette color)))
-
-(defvar retro-square-font-family "Kreative Square SM"
-  "Font family used to create the illusion of pixels.")
+(defun retro--reset-canvas (canvas)
+  "Clean all CANVAS pixels."
+  (fillarray (retro-canvas-pixels canvas) (retro-canvas-background-color canvas)))
 
 (defun retro--calibrate-canvas-in-window (width height window)
   "Return optimal size of pixel in WINDOW for canvas WIDTH x HEIGHT.
@@ -301,6 +219,399 @@ BACKGROUND-COLOR is the background color."
         (setq-local buffer-read-only t)
         canvas))))
 
+;;; TODO: inline
+;;; TODO: unroll?
+(defun retro--vector-clip-blit (sv sx0 sy0 sx1 sy1 sw dv dx dy dw tc)
+  "Copy clip from source vector to destination vector.
+
+SV is the source vector.
+(SX0, SY0) coordinates of clip's top left corner in source vector.
+(SX1, SY1) coordinates of clip's bottom right corner in the source vector.
+SW is the width of the source vector.
+DV is the destination vector.
+(DX, DY) coordinates of clip's top left corner in the destination vector.
+DW is the width of the destination vector.
+TC is the transparent color, a pixel of this color is not copied."
+  (let* ((si (+ (* sy0 sw) sx0))        ; index in source vector
+         (di (+ (* dy dw) dx))          ; index in destination vector
+         (cw (1+ (- sx1 sx0)))          ; clip width
+         (sg (- sw cw))                 ; gap in source vector
+         (dg (- dw cw))                 ; gap in destination vector
+         (sie (+ (* sy1 sw) sx1))       ; index end in source vector
+         (sye (+ (1- cw) sx0))          ; last column (y) of the clip in source vector
+         (px nil))
+    (while (<= si sie)
+      (setq px (aref sv si))
+      (when (/= px tc)
+        (aset dv di px))
+      (if (= (% si sw) sye)
+          (setq si (+ si sg 1)
+                di (+ di dg 1))
+        (setq si (1+ si)
+              di (1+ di))))))
+
+(defun retro--flip-h-vector (vector width height)
+  "Flip vector of pixels on horizontal axis."
+  (let* ((tl 0)
+         (il 0)
+         (ir (1- width)))
+    (while (< tl height)
+      (while (< il ir)
+        (cl-rotatef (aref vector il) (aref vector ir))
+        (setq il (1+ il)
+              ir (1- ir)))
+      (setq tl (1+ tl)
+            il (* tl width)
+            ir (+ il (1- width))))))
+
+
+;;; Tile
+
+(cl-defstruct (retro-tile (:constructor retro--tile-create)
+                          (:copier nil))
+  "Represent a tile in a game."
+  (x 0 :type number)
+  (y 0 :type number)
+  (width 0 :type number)
+  (height 0 :type number)
+  (transparent-color 0 :type number)
+  (pixels nil :type vector))
+
+;;; TODO: check file-path exists
+;;; TODO: check file format
+;;; TODO: documentation
+(defun retro--load-tile (file-path &optional x y)
+  "Load a TILE from FILE-PATH."
+  (with-temp-buffer
+    (insert-file-contents file-path)
+    (goto-char (point-min))
+    (let* ((header (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
+           (tokens (split-string header))
+           (width (string-to-number (nth 0 tokens)))
+           (height (string-to-number (nth 1 tokens)))
+           (transparent-color (nth 2 tokens))
+           (current-line nil)
+           (pixels (make-vector (* width height) 0))
+           (i 0))
+      (forward-line 1)
+      (while (not (eobp))
+        (setq current-line (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
+        (dolist (color (split-string current-line))
+          (aset pixels i (retro--add-color-to-palette color))
+          (cl-incf i))
+        (forward-line 1))
+      (retro--tile-create :x (or x 0)
+                          :y (or y 0)
+                          :width width
+                          :height height
+                          :transparent-color (retro--add-color-to-palette transparent-color)
+                          :pixels pixels))))
+
+(defun retro--move-tile (tile dx dy x0 y0 x1 y1)
+  "Move tile"
+  (let ((x (retro-tile-x tile))
+        (y (retro-tile-y tile))
+        (w (1- (retro-tile-width tile)))
+        (h (1- (retro-tile-height tile))))
+    (when (/= dx 0)
+      (setf (retro-tile-x tile) (if (> dx 0)
+                                    (min (+ x dx) (- x1 w))
+                                  (max (+ x dx) x0))))
+    (when (/= dy 0)
+      (setf (retro-tile-y tile) (if (> dy 0)
+                                    (min (+ y dy) (- y1 h))
+                                  (max (+ y dy) y0))))))
+
+
+(defun retro--flip-h-tile (tile)
+  "Flip tile based on horizontal axis."
+  (retro--flip-h-vector (retro-tile-pixels tile)
+                        (retro-tile-width tile)
+                        (retro-tile-height tile)))
+
+(defun retro--plot-tile (tile canvas)
+  "Plot a TILE on CANVAS."
+  (retro--vector-clip-blit (retro-tile-pixels tile)
+                           0
+                           0
+                           (1- (retro-tile-width tile))
+                           (1- (retro-tile-height tile))
+                           (retro-tile-width tile)
+                           (retro-canvas-pixels canvas)
+                           (retro-tile-x tile)
+                           (retro-tile-y tile)
+                           (retro-canvas-width canvas)
+                           (retro-tile-transparent-color tile)))
+
+
+;;; Background
+
+(cl-defstruct (retro-background (:constructor retro--background-create)
+                                (:copier nil))
+  "Represent a background in a game."
+  (x 0 :type number)
+  (y 0 :type number)
+  (width 0 :type number)
+  (height 0 :type number)
+  (clip-x 0 :type number)
+  (clip-width 0 :type number)
+  (transparent-color 0 :type number)
+  (pixels nil :type vector))
+
+;;; TODO: documentation
+;;; TODO: check clip-x and clip-width (< clip-x tile-width) && (< clip-width tile-width)
+;;; https://javl.github.io/image2cpp/
+(defun retro--load-background (file-path clip-width &optional clip-x x y)
+  "Load a BACKGROUND from FILE-PATH with a CLIP-WIDTH width."
+  (prog1
+      (let* ((tile (retro--load-tile file-path x y))
+             (tpxs (retro-tile-pixels tile))
+             (tw (retro-tile-width tile))
+             (th (retro-tile-height tile))
+             (tpx nil)
+             (tl (* tw th))
+             (bpxs (make-vector (* 2 tl) 0))
+             (ti 0)
+             (bi 0))
+        (while (< ti tl)
+          (setq tpx (aref tpxs ti))
+          (aset bpxs bi tpx)
+          (aset bpxs (+ bi tw) tpx)
+          (setq ti (1+ ti)
+                bi (1+ bi))
+          (when (= (% ti tw) 0)
+            (setq bi (+ bi tw))))
+        (retro--background-create :x x
+                                  :y y
+                                  :width (* 2 tw)
+                                  :height th
+                                  :clip-x (or clip-x 0)
+                                  :clip-width clip-width
+                                  :transparent-color (retro-tile-transparent-color tile)
+                                  :pixels bpxs))
+    (garbage-collect)))
+
+(defun retro--scroll-background (background dx)
+  "Scroll BACKGROUND horizontally by DX."
+  (setf (retro-background-clip-x background)
+        (% (+ (retro-background-clip-x background) dx)
+           (/ (retro-background-width background) 2))))
+
+(defun retro--plot-background (background canvas)
+  "Plot BACKGROUND on CANVAS."
+  (retro--vector-clip-blit (retro-background-pixels background)
+                           (retro-background-clip-x background)
+                           0
+                           (1- (+ (retro-background-clip-x background) (retro-background-clip-width background)))
+                           (1- (retro-background-height background))
+                           (retro-background-width background)
+                           (retro-canvas-pixels canvas)
+                           (retro-background-x background)
+                           (retro-background-y background)
+                           (retro-canvas-width canvas)
+                           (retro-background-transparent-color background)))
+
+
+;;; Sprite
+
+(cl-defstruct (retro-sprite (:constructor retro--sprite-create)
+                            (:copier nil))
+  "Represent a sprite in a game."
+  (x 0 :type number)
+  (y 0 :type number)
+  (width 0 :type number)
+  (height 0 :type number)
+  (frame-i 0 :type number)
+  (frame-n 0 :type number)
+  (transparent-color 0 :type number)
+  (frames nil :type vector))
+
+(defun retro--load-sprite (file-path &optional x y)
+  "Load a SPRITE from FILE-PATH."
+  (with-temp-buffer
+    (insert-file-contents file-path)
+    (goto-char (point-min))
+    (let* ((header (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
+           (tokens (split-string header))
+           (width (string-to-number (nth 0 tokens)))
+           (height (string-to-number (nth 1 tokens)))
+           (frame-n (string-to-number (nth 2 tokens)))
+           (frame-i 0)
+           (transparent-color (nth 3 tokens))
+           (current-line nil)
+           (current-frame nil)
+           (frames (make-vector frame-n nil))
+           (i 0))
+      (forward-line 1)
+      (while (not (eobp))
+        (setq current-line (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
+        (if (equal current-line "-")
+            (progn
+              (setq current-frame (make-vector (* width height) 0)
+                    i 0)
+              (aset frames frame-i current-frame)
+              (setq frame-i (1+ frame-i)))
+          (dolist (color (split-string current-line))
+            (aset current-frame i (retro--add-color-to-palette color))
+            (cl-incf i)))
+        (forward-line 1))
+      (retro--sprite-create :x (or x 0)
+                            :y (or y 0)
+                            :width width
+                            :height height
+                            :frame-i 0
+                            :frame-n frame-n
+                            :transparent-color (retro--add-color-to-palette transparent-color)
+                            :frames frames))))
+
+;;; TODO: remove duplication with retro--move-tile
+(defun retro--move-sprite (sprite dx dy x0 y0 x1 y1)
+  "Move sprite"
+  (let ((x (retro-sprite-x sprite))
+        (y (retro-sprite-y sprite))
+        (w (1- (retro-sprite-width sprite)))
+        (h (1- (retro-sprite-height sprite))))
+    (when (/= dx 0)
+      (setf (retro-sprite-x sprite) (if (> dx 0)
+                                    (min (+ x dx) (- x1 w))
+                                  (max (+ x dx) x0))))
+    (when (/= dy 0)
+      (setf (retro-sprite-y sprite) (if (> dy 0)
+                                    (min (+ y dy) (- y1 h))
+                                  (max (+ y dy) y0))))))
+
+(defun retro--plot-sprite (sprite canvas)
+  "Plot a SPRITE on CANVAS."
+  (retro--vector-clip-blit (aref (retro-sprite-frames sprite) (retro-sprite-frame-i sprite))
+                           0
+                           0
+                           (1- (retro-sprite-width sprite))
+                           (1- (retro-sprite-height sprite))
+                           (retro-sprite-width sprite)
+                           (retro-canvas-pixels canvas)
+                           (retro-sprite-x sprite)
+                           (retro-sprite-y sprite)
+                           (retro-canvas-width canvas)
+                           (retro-sprite-transparent-color sprite)))
+
+(defun retro--next-frame-sprite (sprite)
+  "Make SPRITE take the next animation frame."
+  (setf (retro-sprite-frame-i sprite)
+        (% (1+ (retro-sprite-frame-i sprite))
+           (retro-sprite-frame-n sprite))))
+
+(defun retro--flip-h-sprite (sprite)
+  "Flip horizontally every frame of the SPRITE."
+  (let ((width (retro-sprite-width sprite))
+        (height (retro-sprite-height sprite)))
+    (dotimes (i (retro-sprite-frame-n sprite))
+      (retro--flip-h-vector (aref (retro-sprite-frames sprite) i) width height))))
+
+
+;;; Game
+
+(cl-defstruct (retro-game (:constructor retro-game--create)
+                          (:copier nil))
+  "Game."
+  (name nil :type string)
+  (buffer-name nil :type string)
+  (resolution nil :type cons)
+  (bind nil :type list)
+  (init nil :type function)
+  (update nil :type function)
+  (render nil :type function)
+  (quit-p nil :type boolean)
+  (quit nil :type function)
+  (pending-events () :type list)
+  (current-canvas nil :type canvas)
+  (previous-canvas nil :type canvas))
+
+(cl-defun retro-game-create (&key name resolution bind init update render (background-color 0))
+  "Create GAME."
+  (let* ((original-buffer (current-buffer))
+         (buffer-name (format "*%s-screen*" name))
+         (current-window (get-buffer-window original-buffer))
+         (current-canvas (retro--init-canvas current-window buffer-name (car resolution) (cdr resolution) background-color))
+         (previous-canvas (retro-canvas-copy current-canvas))
+         (keymap (make-sparse-keymap))
+         (bind (retro--normalize-bind bind))
+         (game (retro-game--create :name name
+                                   :buffer-name buffer-name
+                                   :resolution resolution
+                                   :bind bind
+                                   :init init
+                                   :update update
+                                   :render render
+                                   :quit-p nil
+                                   :quit (lambda () (switch-to-buffer original-buffer))
+                                   :pending-events '()
+                                   :current-canvas current-canvas
+                                   :previous-canvas previous-canvas)))
+    (suppress-keymap keymap)
+    (dolist (key (mapcar 'car bind))
+      (define-key keymap (kbd (symbol-name key)) (retro--handle-keypress key game)))
+    (with-current-buffer buffer-name
+      (use-local-map keymap))
+    game))
+
+(defun retro--handle-keypress (key game)
+  "Handle pressed key."
+  (lambda ()
+    (interactive)
+    ;; TODO: (keypress . key) when we will handle mouse events
+    (push key (retro-game-pending-events game))))
+
+(defun retro--handle-pending-events (game-state game)
+  "Handle all pending events."
+  (let ((bind (retro-game-bind game))
+        (pending-events (retro-game-pending-events game))
+        (handler nil))
+    (dolist (key (reverse pending-events))
+      (setq handler (alist-get key bind))
+      (if handler
+          (funcall handler game-state game)
+        (user-error "missing handler for key %s" key))))
+  (setf (retro-game-pending-events game) '()))
+
+(defun retro--handle-quit (_game-state game)
+  "Signal the game to quit."
+  (setf (retro-game-quit-p game) t))
+
+(defun retro--normalize-bind (bind)
+  "Normalize bind."
+  (let ((result '())
+        (keys nil)
+        (handler nil))
+    (dolist (e bind result)
+      (setq keys (if (listp (car e)) (car e) (list (car e)))
+            handler (cdr e))
+      (dolist (key keys)
+        (setq result (cons (cons (intern key)
+                                 handler)
+                           result))))))
+
+(defun retro--game-loop (game &optional game-state last-time)
+  "Game loop."
+  (let* ((game-state (or game-state (funcall (retro-game-init game))))
+         (last-time (or last-time (current-time)))
+         (now (current-time))
+         (elapsed (float-time (time-subtract now last-time)))
+         (current-canvas (retro-game-current-canvas game))
+         (previous-canvas (retro-game-previous-canvas game)))
+    (retro--handle-pending-events game-state game)
+    (funcall (retro-game-update game) elapsed game-state current-canvas)
+    (funcall (retro-game-render game) game-state current-canvas)
+    (with-current-buffer (retro-game-buffer-name game)
+      (retro--buffer-render current-canvas previous-canvas))
+    (retro--reset-canvas previous-canvas)
+    (cl-rotatef (retro-game-current-canvas game) (retro-game-previous-canvas game))
+    (if (retro-game-quit-p game)
+        (funcall (retro-game-quit game))
+      (run-with-timer 0.025 nil 'retro--game-loop game game-state now))))
+
+
+;;; Buffer
+
 (defun retro--buffer-render (current-canvas previous-canvas)
   "Render CANVAS into current buffer."
   (let* ((cpxs (retro-canvas-pixels current-canvas))
@@ -370,6 +681,9 @@ BACKGROUND-COLOR is the background color."
       (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc)))
     (setq-local buffer-read-only t)))
 
+
+;;; Plot
+
 (defun retro--plot-filled-rectangle (x0 y0 x1 y1 color canvas)
   "Plot a filled rectangle with COLOR from (X0, Y0) to (X1, Y1) in CANVAS.
 
@@ -406,556 +720,6 @@ BACKGROUND-COLOR is the background color."
   ;; TODO: assert out of bounds
   (aset pixels (+ (* y width) x) color))
 
-(defun retro--reset-canvas (canvas)
-  "Clean all CANVAS pixels."
-  (fillarray (retro-canvas-pixels canvas) (retro-canvas-background-color canvas)))
-
-
-(defun retro--game-loop (game &optional game-state last-time)
-  "Game loop."
-  (let* ((game-state (or game-state (funcall (retro-game-init game))))
-         (last-time (or last-time (current-time)))
-         (now (current-time))
-         (elapsed (float-time (time-subtract now last-time)))
-         (current-canvas (retro-game-current-canvas game))
-         (previous-canvas (retro-game-previous-canvas game)))
-    (retro--handle-pending-events game-state game)
-    (funcall (retro-game-update game) elapsed game-state current-canvas)
-    (funcall (retro-game-render game) game-state current-canvas)
-    (with-current-buffer (retro-game-buffer-name game)
-      (retro--buffer-render current-canvas previous-canvas))
-    (retro--reset-canvas previous-canvas)
-    (cl-rotatef (retro-game-current-canvas game) (retro-game-previous-canvas game))
-    (if (retro-game-quit-p game)
-        (funcall (retro-game-quit game))
-      (run-with-timer 0.025 nil 'retro--game-loop game game-state now))))
-
-(defun retro-try ()
-  (interactive)
-  (retro--game-loop (walk-demo)))
-
-(cl-defstruct (t-rex-sprite (:constructor t-rex-sprite--create)
-                            (:copier nil))
-  "T-Rex."
-  (running-sprite nil :type retro-sprite)
-  (jumping-sprite nil :type retro-sprite)
-  (current-sprite nil :type retro-sprite)
-  (jump nil :type function)
-  (update nil :type function)
-  (render nil :type function)
-  (ground-y 0 :type number)
-  (top-y 0 :type number)
-  (dy 0 :type number)
-  (x 0 :type number)
-  (y 0 :type number))
-
-(cl-defun t-rex-sprite-create (&key x y ground-y top-y)
-  "Create T-Rex."
-  (let ((running-sprite (retro--load-sprite "t-rex-running.sprite" x y))
-        (jumping-sprite (retro--load-sprite "t-rex-jumping.sprite" x y)))
-    (t-rex-sprite--create :running-sprite running-sprite
-                          :jumping-sprite jumping-sprite
-                          :current-sprite running-sprite
-                          :jump (lambda (t-rex) (when (= (t-rex-sprite-dy t-rex) 0)
-                                                  (setf (t-rex-sprite-dy t-rex) -12
-                                                        (t-rex-sprite-current-sprite t-rex) (t-rex-sprite-jumping-sprite t-rex))))
-                          :update (lambda (_elapsed t-rex _canvas)
-                                    (let ((dy (t-rex-sprite-dy t-rex))
-                                          (y (t-rex-sprite-y t-rex)))
-                                      (setq y (+ y dy))
-                                      (if (< dy 0)
-                                          ;; going up
-                                          (when (< y (t-rex-sprite-top-y t-rex))
-                                              ;; reached the top
-                                              (setq y (t-rex-sprite-top-y t-rex)
-                                                    dy (- dy))))
-                                      (if (> dy 0)
-                                          (when (> y (t-rex-sprite-ground-y t-rex))
-                                              ;; reached the ground
-                                              (setq y (t-rex-sprite-ground-y t-rex)
-                                                    dy 0)
-                                              (setf (t-rex-sprite-current-sprite t-rex) (t-rex-sprite-running-sprite t-rex))))
-                                      (setf (t-rex-sprite-y t-rex) y
-                                            (t-rex-sprite-dy t-rex) dy))
-                                    (retro--next-frame-sprite (t-rex-sprite-current-sprite t-rex)))
-                          :render (lambda (t-rex canvas)
-                                    (let ((current-sprite (t-rex-sprite-current-sprite t-rex)))
-                                      (setf (retro-sprite-x current-sprite) (t-rex-sprite-y t-rex))
-                                      (retro--plot-sprite current-sprite canvas)))
-                          :ground-y ground-y
-                          :top-y top-y
-                          :dy 0
-                          :x x
-                          :y y
-      )))
-
-
-(defun t-rex-demo ()
-  "Show a T-Rex running."
-  (let ((width 400)
-        (height 200))
-    (retro-game-create :name "t-rex"
-                       :resolution (cons width height)
-                       :background-color (ht-get retro-palette-colors->index "#ffffff")
-                       :bind `(("q" . retro--handle-quit)
-                               ("SPC" . (lambda (game-state _)
-                                          (message "jump")
-                                          (funcall (t-rex-sprite-jump (nth 2 game-state)) (nth 2 game-state))
-                                          )))
-                       :init (lambda () (list 0
-                                              (retro--load-background "t-rex-horizon.sprite" width 0 0 (- height 12 1))
-                                              (t-rex-sprite-create :x 10
-                                                                   :y (- height 48)
-                                                                   :ground-y (- height 47 2)
-                                                                   :top-y (- height 150))
-                                              ))
-                       :update (lambda (elapsed game-state canvas)
-                                 (message "[%03d] elapsed: %fs" (nth 0 game-state) elapsed)
-                                 (retro--scroll-background (nth 1 game-state) 6)
-                                 (funcall (t-rex-sprite-update (nth 2 game-state)) elapsed (nth 2 game-state) canvas)
-                                 (cl-incf (car game-state)))
-                       :render (lambda (game-state canvas)
-                                 (retro--plot-background (nth 1 game-state) canvas)
-                                 (funcall (t-rex-sprite-render (nth 2 game-state)) (nth 2 game-state) canvas)
-                                 ))))
-
-
-(defun rainbow-demo ()
-  "Display a colored square with changing color."
-  (retro-game-create :name "rainbow"
-                     :resolution '(320 . 240)
-                     :bind '(("n" . (lambda (_ _) (message "pressed n")))
-                             ("p" . (lambda (_ _) (message "pressed p")))
-                             ("q" . retro--handle-quit))
-                     :init (lambda () (list 0))
-                     :update (lambda (elapsed game-state _canvas)
-                               (message "[%03d] elapsed: %fs" (car game-state) elapsed)
-                               (setf (car game-state) (1+ (car game-state))))
-                     :render (lambda (game-state canvas)
-                               (retro--plot-filled-rectangle 1 1
-                                                             (- (retro-canvas-width canvas) 2)
-                                                             (- (retro-canvas-height canvas) 2)
-                                                             (1+ (% (car game-state) 15))
-                                                             canvas))))
-
-(defun guide-demo ()
-  "Guide a single pixel by pressing arrow keys."
-  (let ((width 50)
-        (height 50))
-    (retro-game-create :name "guide"
-                       :resolution (cons width height)
-                       :background-color (ht-get retro-palette-colors->index "#000000")
-                       :bind `((("<up>" "k") . ,(lambda (game-state _) (setf (nth 2 game-state) (max (1- (nth 2 game-state)) 0))))
-                               (("<down>" "j") . ,(lambda (game-state _) (setf (nth 2 game-state) (min (1+ (nth 2 game-state)) (1- height)))))
-                               (("<left>" "h") . ,(lambda (game-state _) (setf (nth 1 game-state) (max (1- (nth 1 game-state)) 0))))
-                               (("<right>" "l") . ,(lambda (game-state _) (setf (nth 1 game-state) (min (1+ (nth 1 game-state)) (1- width)))))
-                               ("q" . retro--handle-quit))
-                       :init (lambda () (list 0 0 0))  ; i x y
-                       :update (lambda (_elapsed game-state _canvas)
-                                 ;; (message "[%03d] (%d,%d) elapsed: %fs" (nth 0 game-state) (nth 1 game-state) (nth 2 game-state) elapsed)
-                                 (cl-incf (car game-state)))
-                       :render (lambda (game-state canvas)
-                                 (retro--plot-pixel (nth 1 game-state)
-                                                    (nth 2 game-state)
-                                                    (ht-get retro-palette-colors->index "#ffffff")
-                                                    (retro-canvas-pixels canvas)
-                                                    width)))))
-
-
-(defun scrolling-background-demo ()
-  "Show a background scrolling on the right."
-  (let ((width 100)
-        (height 178))
-    (retro-game-create :name "scrolling-background"
-                       :resolution (cons width height)
-                       :background-color (ht-get retro-palette-colors->index "#000000")
-                       :bind `(("q" . retro--handle-quit))
-                       :init (lambda () (list 0 (retro--load-background "flappy-bird-background.sprite" width 0 0 0)))  ; i background
-                       :update (lambda (elapsed game-state _canvas)
-                                 (message "[%03d] elapsed: %fs" (nth 0 game-state) elapsed)
-                                 (retro--scroll-background (nth 1 game-state) 3)
-                                 (cl-incf (car game-state)))
-                       :render (lambda (game-state canvas)
-                                 (retro--plot-background (nth 1 game-state) canvas)))))
-
-
-(defun pink-demo ()
-  "Move a sprite left and right."
-  (let ((width 320)
-        (height 240))
-    (retro-game-create :name "pink"
-                       :resolution (cons width height)
-                       :background-color (ht-get retro-palette-colors->index "#ffffff")
-                       :bind `((("<left>" "h") . ,(lambda (game-state _)
-                                                    (retro--move-tile (nth 1 game-state) -2 0 0 0 (1- width) (1- height))
-                                                    (when (nth 2 game-state)
-                                                      (retro--flip-h-tile (nth 1 game-state))
-                                                      (setf (nth 2 game-state) nil))
-                                                    ))
-                               (("<right>" "l") . ,(lambda (game-state _)
-                                                     (retro--move-tile (nth 1 game-state) 2 0 0 0 (1- width) (1- height))
-                                                     (when (not (nth 2 game-state))
-                                                       (retro--flip-h-tile (nth 1 game-state))
-                                                       (setf (nth 2 game-state) t))
-                                                     ))
-                               ("q" . retro--handle-quit))
-                       :init (lambda () (list 0 (retro--load-tile "pink_monster.sprite" 10 160) t))  ; i x y sprite going-right
-                       :update (lambda (_elapsed game-state _canvas)
-                                 ;; (message "[%03d] (%d,%d) elapsed: %fs" (nth 0 game-state) (nth 1 game-state) (nth 2 game-state) elapsed)
-                                 (cl-incf (car game-state)))
-                       :render (lambda (game-state canvas)
-                                 (retro--plot-tile (nth 1 game-state) canvas)))))
-
-(defun walk-demo ()
-  "Move an animated sprite left and right."
-  (let ((width 320)
-        (height 240))
-    (retro-game-create :name "walk"
-                       :resolution (cons width height)
-                       :background-color (ht-get retro-palette-colors->index "#ffffff")
-                       :bind `((("<left>" "h") . ,(lambda (game-state _)
-                                                    (retro--move-sprite (nth 1 game-state) -2 0 0 0 (1- width) (1- height))
-                                                    (retro--next-frame-sprite (nth 1 game-state))
-                                                    (when (nth 2 game-state)
-                                                      (retro--flip-h-sprite (nth 1 game-state))
-                                                      (setf (nth 2 game-state) nil))
-                                                    ))
-                               (("<right>" "l") . ,(lambda (game-state _)
-                                                     (retro--move-sprite (nth 1 game-state) 2 0 0 0 (1- width) (1- height))
-                                                     (retro--next-frame-sprite (nth 1 game-state))
-                                                     (when (not (nth 2 game-state))
-                                                       (retro--flip-h-sprite (nth 1 game-state))
-                                                       (setf (nth 2 game-state) t))
-                                                     ))
-                               ("q" . retro--handle-quit))
-                       :init (lambda () (list 0 (retro--load-sprite "pink_walk.sprite" 10 160) t))
-                       :update (lambda (_elapsed game-state _canvas)
-                                 ;; (message "[%03d] (%d,%d) elapsed: %fs" (nth 0 game-state) (nth 1 game-state) (nth 2 game-state) elapsed)
-                                 (cl-incf (car game-state)))
-                       :render (lambda (game-state canvas)
-                                 (retro--plot-sprite (nth 1 game-state) canvas)))))
-
-(defun scan-demo ()
-  "Display a colored square with changing color."
-  (let ((width 50)
-        (height 50))
-    (retro-game-create :name "scan"
-                       :resolution (cons width height)
-                       :bind '(("q" . retro--handle-quit))
-                       :init (lambda () (list 0))
-                       :update (lambda (elapsed game-state _canvas)
-                                 (message "[%03d] elapsed: %fs" (car game-state) elapsed)
-                                 (setf (car game-state) (% (1+ (car game-state)) (1- (* width height)))))
-                       :render (lambda (game-state canvas)
-                                 (retro--plot-pixel (% (car game-state) width)
-                                                    (/ (car game-state) width)
-                                                    15
-                                                    (retro-canvas-pixels canvas)
-                                                    width)))))
-
-(defun bouncing-ball-demo ()
-  "Display a bouncing ball."
-  (let ((width 320)
-        (height 240))
-    (retro-game-create :name "bouncing-ball"
-                       :resolution (cons width height)
-                       :bind '(("q" . retro--handle-quit))
-                       :init (lambda () (list 0 3 2 3 0 0)) ; i dx dy size x y
-                       :update (lambda (elapsed game-state _canvas)
-                                 (message "[%03d] elapsed: %fs" (car game-state) elapsed)
-                                 (let ((i (nth 0 game-state))
-                                       (dx (nth 1 game-state))
-                                       (dy (nth 2 game-state))
-                                       (size (nth 3 game-state))
-                                       (x (nth 4 game-state))
-                                       (y (nth 5 game-state)))
-                                   (when (or (> (+ x dx size) (- width 1))
-                                             (< (+ x dx) 0))
-                                     (setq dx (* -1 dx)))
-                                   (when (or (> (+ y dy size) (- height 1))
-                                             (< (+ y dy) 0))
-                                     (setq dy (* -1 dy)))
-                                   (setf (nth 0 game-state) (1+ i)
-                                         (nth 1 game-state) dx
-                                         (nth 2 game-state) dy
-                                         (nth 4 game-state) (+ x dx)
-                                         (nth 5 game-state) (+ y dy))))
-                       :render (lambda (game-state canvas)
-                                 (let ((size (nth 3 game-state))
-                                       (x (nth 4 game-state))
-                                       (y (nth 5 game-state)))
-                                   (retro--plot-filled-rectangle x y (+ x size) (+ y size) 15 canvas))))))
-
-(defun black-demo ()
-  "Display a black screen."
-  (retro-game-create :name "black"
-                     :resolution '(320 . 240)
-                     :bind '(("q" . retro--handle-quit))
-                     :init (lambda () (list 0))
-                     :update (lambda (elapsed game-state _canvas)
-                               (message "[%03d] elapsed: %fs" (car game-state) elapsed)
-                               (setf (car game-state) (1+ (car game-state))))
-                     :render (lambda (_game-state _canvas) nil)))
-
-
-;; https://javl.github.io/image2cpp/
-
-(cl-defstruct (retro-background (:constructor retro--background-create)
-                                (:copier nil))
-  "Represent a background in a game."
-  (x 0 :type number)
-  (y 0 :type number)
-  (width 0 :type number)
-  (height 0 :type number)
-  (clip-x 0 :type number)
-  (clip-width 0 :type number)
-  (transparent-color 0 :type number)
-  (pixels nil :type vector))
-
-;;; TODO: documentation
-;;; TODO: check clip-x and clip-width (< clip-x tile-width) && (< clip-width tile-width)
-(defun retro--load-background (file-path clip-width &optional clip-x x y)
-  "Load a BACKGROUND from FILE-PATH with a CLIP-WIDTH width."
-  (prog1
-      (let* ((tile (retro--load-tile file-path x y))
-             (tpxs (retro-tile-pixels tile))
-             (tw (retro-tile-width tile))
-             (th (retro-tile-height tile))
-             (tpx nil)
-             (tl (* tw th))
-             (bpxs (make-vector (* 2 tl) 0))
-             (ti 0)
-             (bi 0))
-        (while (< ti tl)
-          (setq tpx (aref tpxs ti))
-          (aset bpxs bi tpx)
-          (aset bpxs (+ bi tw) tpx)
-          (setq ti (1+ ti)
-                bi (1+ bi))
-          (when (= (% ti tw) 0)
-            (setq bi (+ bi tw))))
-        (retro--background-create :x x
-                                  :y y
-                                  :width (* 2 tw)
-                                  :height th
-                                  :clip-x (or clip-x 0)
-                                  :clip-width clip-width
-                                  :transparent-color (retro-tile-transparent-color tile)
-                                  :pixels bpxs))
-    (garbage-collect)))
-
-(defun retro--scroll-background (background dx)
-  "Scroll BACKGROUND horizontally by DX."
-  (setf (retro-background-clip-x background)
-        (% (+ (retro-background-clip-x background) dx)
-           (/ (retro-background-width background) 2))))
-
-(defun retro--plot-background (background canvas)
-  "Plot BACKGROUND on CANVAS."
-  (retro--vector-clip-blit (retro-background-pixels background)
-                           (retro-background-clip-x background)
-                           0
-                           (1- (+ (retro-background-clip-x background) (retro-background-clip-width background)))
-                           (1- (retro-background-height background))
-                           (retro-background-width background)
-                           (retro-canvas-pixels canvas)
-                           (retro-background-x background)
-                           (retro-background-y background)
-                           (retro-canvas-width canvas)
-                           (retro-background-transparent-color background)))
-
-
-(defun retro--load-sprite (file-path &optional x y)
-  "Load a SPRITE from FILE-PATH."
-  (with-temp-buffer
-    (insert-file-contents file-path)
-    (goto-char (point-min))
-    (let* ((header (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
-           (tokens (split-string header))
-           (width (string-to-number (nth 0 tokens)))
-           (height (string-to-number (nth 1 tokens)))
-           (frame-n (string-to-number (nth 2 tokens)))
-           (frame-i 0)
-           (transparent-color (nth 3 tokens))
-           (current-line nil)
-           (current-frame nil)
-           (frames (make-vector frame-n nil))
-           (i 0))
-      (forward-line 1)
-      (while (not (eobp))
-        (setq current-line (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
-        (if (equal current-line "-")
-            (progn
-              (setq current-frame (make-vector (* width height) 0)
-                    i 0)
-              (aset frames frame-i current-frame)
-              (setq frame-i (1+ frame-i)))
-          (dolist (color (split-string current-line))
-            (aset current-frame i (retro--add-color-to-palette color))
-            (cl-incf i)))
-        (forward-line 1))
-      (retro--sprite-create :x (or x 0)
-                            :y (or y 0)
-                            :width width
-                            :height height
-                            :frame-i 0
-                            :frame-n frame-n
-                            :transparent-color (retro--add-color-to-palette transparent-color)
-                            :frames frames))))
-
-(defun retro--plot-sprite (sprite canvas)
-  "Plot a SPRITE on CANVAS."
-  (retro--vector-clip-blit (aref (retro-sprite-frames sprite) (retro-sprite-frame-i sprite))
-                           0
-                           0
-                           (1- (retro-sprite-width sprite))
-                           (1- (retro-sprite-height sprite))
-                           (retro-sprite-width sprite)
-                           (retro-canvas-pixels canvas)
-                           (retro-sprite-x sprite)
-                           (retro-sprite-y sprite)
-                           (retro-canvas-width canvas)
-                           (retro-sprite-transparent-color sprite)))
-
-(defun retro--next-frame-sprite (sprite)
-  "Make SPRITE take the next animation frame."
-  (setf (retro-sprite-frame-i sprite)
-        (% (1+ (retro-sprite-frame-i sprite))
-           (retro-sprite-frame-n sprite))))
-
-(defun retro--flip-h-sprite (sprite)
-  "Flip horizontally every frame of the SPRITE."
-  (let ((width (retro-sprite-width sprite))
-        (height (retro-sprite-height sprite)))
-    (dotimes (i (retro-sprite-frame-n sprite))
-      (retro--flip-h-vector (aref (retro-sprite-frames sprite) i) width height))))
-
-;;; TODO: check file-path exists
-;;; TODO: check file format
-;;; TODO: documentation
-(defun retro--load-tile (file-path &optional x y)
-  "Load a TILE from FILE-PATH."
-  (with-temp-buffer
-    (insert-file-contents file-path)
-    (goto-char (point-min))
-    (let* ((header (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
-           (tokens (split-string header))
-           (width (string-to-number (nth 0 tokens)))
-           (height (string-to-number (nth 1 tokens)))
-           (transparent-color (nth 2 tokens))
-           (current-line nil)
-           (pixels (make-vector (* width height) 0))
-           (i 0))
-      (forward-line 1)
-      (while (not (eobp))
-        (setq current-line (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
-        (dolist (color (split-string current-line))
-          (aset pixels i (retro--add-color-to-palette color))
-          (cl-incf i))
-        (forward-line 1))
-      (retro--tile-create :x (or x 0)
-                          :y (or y 0)
-                          :width width
-                          :height height
-                          :transparent-color (retro--add-color-to-palette transparent-color)
-                          :pixels pixels))))
-
-(defun retro--flip-h-tile (tile)
-  "Flip tile based on horizontal axis."
-  (retro--flip-h-vector (retro-tile-pixels tile)
-                        (retro-tile-width tile)
-                        (retro-tile-height tile)))
-
-(defun retro--flip-h-vector (vector width height)
-  "Flip vector of pixels on horizontal axis."
-  (let* ((tl 0)
-         (il 0)
-         (ir (1- width)))
-    (while (< tl height)
-      (while (< il ir)
-        (cl-rotatef (aref vector il) (aref vector ir))
-        (setq il (1+ il)
-              ir (1- ir)))
-      (setq tl (1+ tl)
-            il (* tl width)
-            ir (+ il (1- width))))))
-
-;;; TODO: remove this with something better for sprite with velocity and what not
-(defun retro--move-tile (tile dx dy x0 y0 x1 y1)
-  "Move tile"
-  (let ((x (retro-tile-x tile))
-        (y (retro-tile-y tile))
-        (w (1- (retro-tile-width tile)))
-        (h (1- (retro-tile-height tile))))
-    (when (/= dx 0)
-      (setf (retro-tile-x tile) (if (> dx 0)
-                                    (min (+ x dx) (- x1 w))
-                                  (max (+ x dx) x0))))
-    (when (/= dy 0)
-      (setf (retro-tile-y tile) (if (> dy 0)
-                                    (min (+ y dy) (- y1 h))
-                                  (max (+ y dy) y0))))))
-
-;;; TODO: remove duplication with retro--move-tile
-(defun retro--move-sprite (sprite dx dy x0 y0 x1 y1)
-  "Move sprite"
-  (let ((x (retro-sprite-x sprite))
-        (y (retro-sprite-y sprite))
-        (w (1- (retro-sprite-width sprite)))
-        (h (1- (retro-sprite-height sprite))))
-    (when (/= dx 0)
-      (setf (retro-sprite-x sprite) (if (> dx 0)
-                                    (min (+ x dx) (- x1 w))
-                                  (max (+ x dx) x0))))
-    (when (/= dy 0)
-      (setf (retro-sprite-y sprite) (if (> dy 0)
-                                    (min (+ y dy) (- y1 h))
-                                  (max (+ y dy) y0))))))
-
-;;; TODO: inline
-;;; TODO: unroll?
-(defun retro--vector-clip-blit (sv sx0 sy0 sx1 sy1 sw dv dx dy dw tc)
-  "Copy clip from source vector to destination vector.
-
-SV is the source vector.
-(SX0, SY0) coordinates of clip's top left corner in source vector.
-(SX1, SY1) coordinates of clip's bottom right corner in the source vector.
-SW is the width of the source vector.
-DV is the destination vector.
-(DX, DY) coordinates of clip's top left corner in the destination vector.
-DW is the width of the destination vector.
-TC is the transparent color, a pixel of this color is not copied."
-  (let* ((si (+ (* sy0 sw) sx0))        ; index in source vector
-         (di (+ (* dy dw) dx))          ; index in destination vector
-         (cw (1+ (- sx1 sx0)))          ; clip width
-         (sg (- sw cw))                 ; gap in source vector
-         (dg (- dw cw))                 ; gap in destination vector
-         (sie (+ (* sy1 sw) sx1))       ; index end in source vector
-         (sye (+ (1- cw) sx0))          ; last column (y) of the clip in source vector
-         (px nil))
-    (while (<= si sie)
-      (setq px (aref sv si))
-      (when (/= px tc)
-        (aset dv di px))
-      (if (= (% si sw) sye)
-          (setq si (+ si sg 1)
-                di (+ di dg 1))
-        (setq si (1+ si)
-              di (1+ di))))))
-
-(defun retro--plot-tile (tile canvas)
-  "Plot a TILE on CANVAS."
-  (retro--vector-clip-blit (retro-tile-pixels tile)
-                           0
-                           0
-                           (1- (retro-tile-width tile))
-                           (1- (retro-tile-height tile))
-                           (retro-tile-width tile)
-                           (retro-canvas-pixels canvas)
-                           (retro-tile-x tile)
-                           (retro-tile-y tile)
-                           (retro-canvas-width canvas)
-                           (retro-tile-transparent-color tile)))
 
 ;; (retro-game "gol"
 ;;   :init gol-init
@@ -972,8 +736,20 @@ TC is the transparent color, a pixel of this color is not copied."
 ;;; physics https://www.youtube.com/playlist?list=PLtrSb4XxIVbpZpV65kk73OoUcIrBzoSiO
 ;;; sprite https://penusbmic.itch.io/free-dungeon-ruins-tileset
 
+;; (defun retro-try ()
+;;   (interactive)
+;;   (retro--game-loop (walk-demo)))
+
 ;;; TODO:
-;;; - [ ] repository and packaging (https://github.com/cask/cask, https://github.com/jorgenschaefer/emacs-buttercup, ...)
+;;; - [ ] run examples
+;;; - [ ] run simple unit tests
+;;; - [ ] install with straight
+;;; - [ ] remove everything from local-packages
+;;; - [ ] remove everything from ~/code/retro.el
+;;; - [ ] create a .project.org
+;;; - [ ] add CI
+
+;;; - [ ] support comment in sprite file
 ;;; - [ ] clip sprites when they are partially inside the canvas, do nothing when they are outside
 ;;; - [ ] DEMO: walking pink monster with bending space (when goes outside from the right comes back from the left)
 ;;; - [ ] scroll background based on time and not fixed amount (100px per second = velocity)?
@@ -1046,4 +822,4 @@ TC is the transparent color, a pixel of this color is not copied."
 ;; Local Variables:
 ;; coding: utf-8
 ;; End:
-;;; retro-mode.el ends here
+;;; retro.el ends here
