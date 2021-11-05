@@ -737,11 +737,7 @@ TC is the transparent color, a pixel of this color is not copied."
 ;;; sprite https://penusbmic.itch.io/free-dungeon-ruins-tileset
 
 ;;; TODO:
-;;; - [ ] install with straight
-;;; - [ ] remove everything from local-packages
-;;; - [ ] remove everything from ~/code/retro.el
 ;;; - [ ] create a .project.org
-
 ;;; - [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates
 ;;; - [ ] support comment in sprite file
 ;;; - [ ] clip sprites when they are partially inside the canvas, do nothing when they are outside
