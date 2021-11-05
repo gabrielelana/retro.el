@@ -736,12 +736,7 @@ TC is the transparent color, a pixel of this color is not copied."
 ;;; physics https://www.youtube.com/playlist?list=PLtrSb4XxIVbpZpV65kk73OoUcIrBzoSiO
 ;;; sprite https://penusbmic.itch.io/free-dungeon-ruins-tileset
 
-;; (defun retro-try ()
-;;   (interactive)
-;;   (retro--game-loop (walk-demo)))
-
 ;;; TODO:
-;;; - [ ] run simple unit tests
 ;;; - [ ] install with straight
 ;;; - [ ] remove everything from local-packages
 ;;; - [ ] remove everything from ~/code/retro.el
