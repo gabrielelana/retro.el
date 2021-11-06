@@ -331,17 +331,40 @@ TC is the transparent color, a pixel of this color is not copied."
 
 (defun retro--plot-tile (tile canvas)
   "Plot a TILE on CANVAS."
-  (retro--vector-clip-blit (retro-tile-pixels tile)
-                           0
-                           0
-                           (1- (retro-tile-width tile))
-                           (1- (retro-tile-height tile))
-                           (retro-tile-width tile)
-                           (retro-canvas-pixels canvas)
-                           (retro-tile-x tile)
-                           (retro-tile-y tile)
-                           (retro-canvas-width canvas)
-                           (retro-tile-transparent-color tile)))
+  ;; TODO: duplicated in retro--plot-sprite
+  (let* ((cw (retro-canvas-width canvas))
+         (ch (retro-canvas-height canvas))
+         (sw (retro-tile-width tile))
+         (sh (retro-tile-height tile))
+         (sx (retro-tile-x tile))
+         (sy (retro-tile-y tile))
+         ;; coordinates are relative to canvas
+         (cl (cons 0 0))                ; canvas top left corner
+         (cr (cons (1- cw) (1- ch)))    ; canvar right bottom corner
+         (sl (cons sx sy))              ; tile top left corner
+         (sr (cons (1- sw) (1- sh)))    ; tile right bottom corner
+         ;; coordinates of the intersection
+         (sx0 (max (car cl)
+                   (car sl)))
+         (sx1 (min (+ (car cl) (car cr))
+                   (+ (car sl) (car sr))))
+         (sy0 (max (cdr cl)
+                   (cdr sl)))
+         (sy1 (min (+ (cdr cl) (cdr cr))
+                   (+ (cdr sl) (cdr sr)))))
+    (when (and (<= sx0 sx1) (<= sy0 sy1))
+      (retro--vector-clip-blit (retro-tile-pixels tile)
+                               ;; convert sx0 sy0 sx1 sy1 to tile relative coordinates
+                               (- sx0 sx)
+                               (- sy0 sy)
+                               (- sx1 sx)
+                               (- sy1 sy)
+                               sw
+                               (retro-canvas-pixels canvas)
+                               sx0
+                               sy0
+                               cw
+                               (retro-tile-transparent-color tile)))))
 
 
 ;;; Background
@@ -482,17 +505,40 @@ TC is the transparent color, a pixel of this color is not copied."
 
 (defun retro--plot-sprite (sprite canvas)
   "Plot a SPRITE on CANVAS."
-  (retro--vector-clip-blit (aref (retro-sprite-frames sprite) (retro-sprite-frame-i sprite))
-                           0
-                           0
-                           (1- (retro-sprite-width sprite))
-                           (1- (retro-sprite-height sprite))
-                           (retro-sprite-width sprite)
-                           (retro-canvas-pixels canvas)
-                           (retro-sprite-x sprite)
-                           (retro-sprite-y sprite)
-                           (retro-canvas-width canvas)
-                           (retro-sprite-transparent-color sprite)))
+  ;; TODO: duplicated in retro--plot-tile
+  (let* ((cw (retro-canvas-width canvas))
+         (ch (retro-canvas-height canvas))
+         (sw (retro-sprite-width sprite))
+         (sh (retro-sprite-height sprite))
+         (sx (retro-sprite-x sprite))
+         (sy (retro-sprite-y sprite))
+         ;; coordinates are relative to canvas
+         (cl (cons 0 0))                ; canvas top left corner
+         (cr (cons (1- cw) (1- ch)))    ; canvar right bottom corner
+         (sl (cons sx sy))              ; sprite top left corner
+         (sr (cons (1- sw) (1- sh)))    ; sprite right bottom corner
+         ;; coordinates of the intersection
+         (sx0 (max (car cl)
+                   (car sl)))
+         (sx1 (min (+ (car cl) (car cr))
+                   (+ (car sl) (car sr))))
+         (sy0 (max (cdr cl)
+                   (cdr sl)))
+         (sy1 (min (+ (cdr cl) (cdr cr))
+                   (+ (cdr sl) (cdr sr)))))
+    (when (and (<= sx0 sx1) (<= sy0 sy1))
+      (retro--vector-clip-blit (aref (retro-sprite-frames sprite) (retro-sprite-frame-i sprite))
+                               ;; convert sx0 sy0 sx1 sy1 to sprite relative coordinates
+                               (- sx0 sx)
+                               (- sy0 sy)
+                               (- sx1 sx)
+                               (- sy1 sy)
+                               sw
+                               (retro-canvas-pixels canvas)
+                               sx0
+                               sy0
+                               cw
+                               (retro-sprite-transparent-color sprite)))))
 
 (defun retro--next-frame-sprite (sprite)
   "Make SPRITE take the next animation frame."

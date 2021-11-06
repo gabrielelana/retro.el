@@ -7,15 +7,33 @@ Longer description of the task
 - [ ] Something to do
 - [ ] Something to do
 
-* Refile
+* Refile [4/42]
 Tasks to be refiled somewhere else in this project
 
-- [ ] support comment in sprites file
+- [X] Test load tile from file ~with-content-file~ macro
+      #+BEGIN_EXAMPLE
+      (let ((sprite-file (make-temp-file "retro-test")))
+        (with-content-file sprite-file
+          '("5 5 #000000"
+            ">> default 1"
+            "--"
+            "#ff0000  #00ff00 #0000ff"
+            "#00ff00  #0000ff #ff0000"
+            "#0000ff  #ff0000 #00ff00")
+           ;; here the file has been written and can be used
+           ) ;; here the file has been closed and deleted
+         )
+      #+END_EXAMPLE
+- [X] Test load sprite from file
+- [ ] Test load tile/sprite from file with comments
+- [ ] Test load sprite from file with multiple plays (plays[name] -> frames[index] -> frame)
+- [ ] FIX: retro--game-loop must return nil
 - [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates :-/
-- [ ] clip sprites when they are partially inside the canvas, do nothing when they are outside
-- [ ] DEMO: walking pink monster with bending space (when goes outside from the right comes back from the left)
-- [ ] scroll background based on time and not fixed amount (100px per second = velocity)?
+- [X] clip sprites when they are partially inside the canvas, do nothing when they are outside
+- [X] DEMO: walking pink monster with bending space (when goes outside from the right comes back from the left)
 - [ ] DEMO: t-rex with "smooth" scrolling background
+  - [ ] scroll background based on time and not fixed amount (100px per second = velocity)?
+  - [ ] add clouds
 - [ ] benchmarks of different scenarios to evaluate possible performance improvement strategies
 - [ ] test with calibrate.sprite and clipping with buttercup?
 - [ ] handle mouse click events (keypress . key) || (mouseclick . (x . y))
@@ -48,8 +66,8 @@ Tasks to be refiled somewhere else in this project
 - [ ] major mode for sprite files with instant preview (side by side buffer)
 - [ ] utility to import an image file into a sprite file
 - [ ] game: offline chrome dinosaur
-      - https://github.com/chirag64/t-rex-runner-bot/tree/gh-pages/img
-      - https://github.com/wayou/t-rex-runner/blob/gh-pages/index.js
+  - https://github.com/chirag64/t-rex-runner-bot/tree/gh-pages/img
+  - https://github.com/wayou/t-rex-runner/blob/gh-pages/index.js
 - [ ] game: snake
 - [ ] game: flappy bird
 - [ ] game: pico-8 emulator || similar platform
