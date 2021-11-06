@@ -46,15 +46,15 @@
 ;;                           "#000000  #000000 #ff0000"))
 
 (defvar simple-sprite '("3 3 3 #000000"
-                        "-"
+                        "--"
                         "#ff0000  #000000 #000000"
                         "#ff0000  #000000 #000000"
                         "#ff0000  #000000 #000000"
-                        "-"
+                        "--"
                         "#000000  #ff0000 #000000"
                         "#000000  #ff0000 #000000"
                         "#000000  #ff0000 #000000"
-                        "-"
+                        "--"
                         "#000000  #000000 #ff0000"
                         "#000000  #000000 #ff0000"
                         "#000000  #000000 #ff0000"))
@@ -63,6 +63,37 @@
   (with-content-file tile-file simple-sprite
     (let ((sprite (retro--load-sprite tile-file)))
       (should (retro-sprite-p sprite))
+      (let* ((frames (retro-sprite-frames sprite))
+             (pixels (aref frames (retro-sprite-frame-i sprite)))
+             (color-0 (retro--add-color-to-palette "#000000"))
+             (color-1 (retro--add-color-to-palette "#ff0000")))
+        (should (equal color-1 (aref pixels 0)))
+        (should (equal color-0 (aref pixels 1)))
+        (should (equal color-0 (aref pixels 2)))
+        (should (equal color-1 (aref pixels 3)))))))
+
+(defvar simple-sprite-with-comments '("3 3 3 #000000"
+                                      "--"
+                                      "// this is a comment"
+                                      "#ff0000  #000000 #000000"
+                                      "#ff0000  #000000 #000000"
+                                      "// another"
+                                      "#ff0000  #000000 #000000"
+                                      "--"
+                                      "#000000  #ff0000 #000000"
+                                      "#000000  #ff0000 #000000"
+                                      "#000000  #ff0000 #000000"
+                                      "--"
+                                      "  // another"
+                                      "#000000  #000000 #ff0000"
+                                      "#000000  #000000 #ff0000"
+                                      "#000000  #000000 #ff0000"))
+
+(ert-deftest sprite-test-load-skips-comments ()
+  (with-content-file tile-file simple-sprite-with-comments
+    (let ((sprite (retro--load-sprite tile-file)))
+      (should (retro-sprite-p sprite))
+      (should (equal 3 (retro-sprite-frame-n sprite)))
       (let* ((frames (retro-sprite-frames sprite))
              (pixels (aref frames (retro-sprite-frame-i sprite)))
              (color-0 (retro--add-color-to-palette "#000000"))
@@ -95,7 +126,7 @@
       (should (equal color-0 (aref cpxs 8))))))
 
 (defvar simple-sprite-full '("3 3 1 #000000"
-                             "-"
+                             "--"
                              "#ffffff  #ffffff #ffffff"
                              "#ffffff  #ffffff #ffffff"
                              "#ffffff  #ffffff #ffffff"))

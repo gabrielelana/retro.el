@@ -37,8 +37,24 @@
                       "#00ff00  #0000ff #ff0000"
                       "#0000ff  #ff0000 #00ff00"))
 
+(defvar simple-tile-with-comments '("3 3 #000000"
+                                    "// very simple tile"
+                                    "#ff0000  #00ff00 #0000ff"
+                                    "#00ff00  #0000ff #ff0000"
+                                    "#0000ff  #ff0000 #00ff00"))
+
 (ert-deftest tile-test-can-be-loaded ()
   (with-content-file tile-file simple-tile
+    (let ((tile (retro--load-tile tile-file)))
+      (should (retro-tile-p tile))
+      (let ((pixels (retro-tile-pixels tile))
+            (color-1 (retro--add-color-to-palette "#ff0000")))
+        (should (equal color-1 (aref pixels 0)))
+        (should (equal color-1 (aref pixels 5)))
+        (should (equal color-1 (aref pixels 7)))))))
+
+(ert-deftest tile-test-load-skips-comments ()
+  (with-content-file tile-file simple-tile-with-comments
     (let ((tile (retro--load-tile tile-file)))
       (should (retro-tile-p tile))
       (let ((pixels (retro-tile-pixels tile))
