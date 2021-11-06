@@ -25,7 +25,12 @@
 ;;; Code:
 
 (require 'ert)
-(require 'retro (expand-file-name "./../retro.el"))
+
+;;; TODO: is there a better way to support both flycheck and ert-runner?
+(require 'test-helper (expand-file-name "./test-helper.el") t)
+(require 'test-helper (expand-file-name "./test/test-helper.el") t)
+(require 'retro (expand-file-name "./../retro.el") t)
+(require 'retro (expand-file-name "./retro.el") t)
 
 (defvar small-canvas (retro-canvas-create :margin-left 0
                                           :margin-top 0

@@ -9,7 +9,7 @@ prepare:
 	${CASK} install
 
 test:
-	${CASK} exec ert-runner --load *.el test/canvas-test.el
+	${CASK} exec ert-runner --load *.el test/*-test.el
 
 compile:
 	${CASK} exec ${EMACS} -Q -batch -f batch-byte-compile *.el
