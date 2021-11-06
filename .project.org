@@ -7,15 +7,14 @@ Longer description of the task
 - [ ] Something to do
 - [ ] Something to do
 
-* Refile [6/42]
+* Refile [7/37]
 Tasks to be refiled somewhere else in this project
 
-- [X] Test load tile from file ~with-content-file~ macro
+- [X] test load tile from file ~with-content-file~ macro
       #+BEGIN_EXAMPLE
       (let ((sprite-file (make-temp-file "retro-test")))
         (with-content-file sprite-file
-          '("5 5 #000000"
-            ">> default 1"
+          '("5 5 1 #000000"
             "--"
             "#ff0000  #00ff00 #0000ff"
             "#00ff00  #0000ff #ff0000"
@@ -24,31 +23,25 @@ Tasks to be refiled somewhere else in this project
            ) ;; here the file has been closed and deleted
          )
       #+END_EXAMPLE
-- [X] Test load sprite from file
-- [X] Test load tile/sprite from file with comments
+- [X] test load sprite from file
+- [X] test load tile/sprite from file with comments
 - [X] FIX: retro--game-loop must return t
-- [ ] Test load sprite from file with multiple plays (plays[name] -> frames[index] -> frame)
-- [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates :-/
 - [X] clip sprites when they are partially inside the canvas, do nothing when they are outside
 - [X] DEMO: walking pink monster with bending space (when goes outside from the right comes back from the left)
 - [ ] DEMO: t-rex with "smooth" scrolling background
+  - [ ] load sprite from file with multiple plays (plays[name] -> frames[index] -> frame)
+  - [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates :-/
   - [ ] scroll background based on time and not fixed amount (100px per second = velocity)?
   - [ ] add clouds
+- [ ] DEMO: game of life (see http://www.conwaylife.com/ref/lexicon/lex.htm or https://www.conwaylife.com/patterns/ for ASCII patterns)
+  - [ ] retro-game macro
+  - [ ] game `:update-every <seconds>` to make a fixed tick, use a wrapper function for the given `:update` function
+  - [ ] handle mouse click events (keypress . key) || (mouseclick . (x . y))
+- [ ] add bounding box to sprite and tiles
 - [ ] benchmarks of different scenarios to evaluate possible performance improvement strategies
 - [ ] test with calibrate.sprite and clipping with buttercup?
-- [ ] handle mouse click events (keypress . key) || (mouseclick . (x . y))
-- [ ] retro-game macro
-- [ ] game `:update-every <seconds>` to make a fixed tick, use a wrapper function for the given `:update` function
-- [ ] DEMO: game of life (see http://www.conwaylife.com/ref/lexicon/lex.htm or https://www.conwaylife.com/patterns/ for ASCII patterns)
-- [ ] add bounding box to sprite and tiles
 - [ ] learn about game engines (dragonfly book)
 - [ ] learn about defclass and defmethod && how to handle state machines in Common Lisp
-- [ ] support sprites with multiple animations: modes/actions/clips: (name -> frame) -> frames: (index -> pixels) -> pixels: (index -> pixel). add field :current-mode
-      #+BEGIN_EXAMPLE
-      >> <NAME> <NUMBER-OF-FRAMES>
-      -- <FRAME-INDEX>
-      <FRAME>
-      #+END_EXAMPLE
 - [ ] something for gravity, velocity and damping + ground
 - [ ] render based on time passed (see https://gameprogrammingpatterns.com/game-loop.html)
 - [ ] collision detection between elements
@@ -58,7 +51,7 @@ Tasks to be refiled somewhere else in this project
 - [ ] ~(retro--sprite-flip-v sprite)~
 - [ ] retro--tile-flip-v
 - [ ] flip-v
-- [ ] fix: how to properly import ht library to make flycheck happy
+- [X] fix: how to properly import ht library to make flycheck happy
 - [ ] garbage collection trick?
 - [ ] extract example and ask for possible improvements on emacs-devel ml
 - [ ] add hook on window resize -> font dimension resize
