@@ -7,7 +7,7 @@ Longer description of the task
 - [ ] Something to do
 - [ ] Something to do
 
-* Refile [4/42]
+* Refile [6/42]
 Tasks to be refiled somewhere else in this project
 
 - [X] Test load tile from file ~with-content-file~ macro
@@ -25,9 +25,9 @@ Tasks to be refiled somewhere else in this project
          )
       #+END_EXAMPLE
 - [X] Test load sprite from file
-- [ ] Test load tile/sprite from file with comments
+- [X] Test load tile/sprite from file with comments
+- [X] FIX: retro--game-loop must return t
 - [ ] Test load sprite from file with multiple plays (plays[name] -> frames[index] -> frame)
-- [ ] FIX: retro--game-loop must return nil
 - [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates :-/
 - [X] clip sprites when they are partially inside the canvas, do nothing when they are outside
 - [X] DEMO: walking pink monster with bending space (when goes outside from the right comes back from the left)

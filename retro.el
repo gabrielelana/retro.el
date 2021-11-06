@@ -656,7 +656,8 @@ TC is the transparent color, a pixel of this color is not copied."
     (cl-rotatef (retro-game-current-canvas game) (retro-game-previous-canvas game))
     (if (retro-game-quit-p game)
         (funcall (retro-game-quit game))
-      (run-with-timer 0.025 nil 'retro--game-loop game game-state now))))
+      (run-with-timer 0.025 nil 'retro--game-loop game game-state now)
+      t)))
 
 
 ;;; Buffer
