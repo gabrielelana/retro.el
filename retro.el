@@ -598,28 +598,54 @@ TC is the transparent color, a pixel of this color is not copied."
                                    :previous-canvas previous-canvas)))
     (suppress-keymap keymap)
     (dolist (key (mapcar 'car bind))
-      (define-key keymap (kbd (symbol-name key)) (retro--handle-keypress key game)))
+      (if (string-search "mouse" (symbol-name key))
+          (define-key keymap (kbd (symbol-name key)) (retro--handle-mouseclick key game))
+        (define-key keymap (kbd (symbol-name key)) (retro--handle-keypress key game))))
     (with-current-buffer buffer-name
       (use-local-map keymap))
     game))
+
+(defun retro--handle-mouseclick (click game)
+  "Handle mouse click."
+  ;; NOTE: allocate once per handler rather once per event, less gc
+  (let* ((canvas (retro-game-current-canvas game))
+         (before (retro-canvas-buffer-before-length canvas))
+         (line (retro-canvas-buffer-line-length canvas))
+         (margin (retro-canvas-margin-left canvas)))
+    (lambda (e)
+      (interactive "e")
+      ;; SEE: https://www.gnu.org/software/emacs/manual/html_node/elisp/Click-Events.html
+      (let ((y (/ (- (nth 1 (cadr e)) before) line))
+            (x (- (% (- (nth 1 (cadr e)) before) line) margin 1)))
+        (push (cons 'mouseclick (cons click (cons x y)))
+              (retro-game-pending-events game))))))
 
 (defun retro--handle-keypress (key game)
   "Handle pressed key."
   (lambda ()
     (interactive)
-    ;; TODO: (keypress . key) when we will handle mouse events
-    (push key (retro-game-pending-events game))))
+    ;; TODO: handle event here as well like in mouseclick?
+    (push (cons 'keypress key)
+          (retro-game-pending-events game))))
 
 (defun retro--handle-pending-events (game-state game)
   "Handle all pending events."
   (let ((bind (retro-game-bind game))
         (pending-events (retro-game-pending-events game))
         (handler nil))
-    (dolist (key (reverse pending-events))
-      (setq handler (alist-get key bind))
-      (if handler
-          (funcall handler game-state game)
-        (user-error "missing handler for key %s" key))))
+    (dolist (event (reverse pending-events))
+      (cond ((eq (car event) 'keypress)
+             (setq handler (alist-get (cdr event) bind))
+             (if handler
+                 ;; TODO: give also the third parameter
+                 (funcall handler game-state game)
+               (user-error "missing handler for keypress %s" (cdr event))))
+            ((eq (car event) 'mouseclick)
+             (setq handler (alist-get (cadr event) bind))
+             (if handler
+                 (funcall handler game-state game (cddr event))
+               (user-error "missing handler for mouseclick %s" (cadr event))))
+            (t (user-error "missing handler for event %s" event)))))
   (setf (retro-game-pending-events game) '()))
 
 (defun retro--update-every (seconds updatef)

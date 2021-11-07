@@ -31,7 +31,7 @@ Tasks to be refiled somewhere else in this project
 - [-] DEMO: game of life (see http://www.conwaylife.com/ref/lexicon/lex.htm or https://www.conwaylife.com/patterns/ for ASCII patterns)
   - [ ] implement game of life logic
   - [X] game `:update-every <seconds>` to make a fixed tick, use a wrapper function for the given `:update` function
-  - [ ] handle mouse click events (keypress . key) || (mouseclick . (x . y))
+  - [X] handle mouse click events (keypress . key) || (mouseclick . (x . y))
   - [ ] retro-game macro
   - [ ] import data from ASCII patterns above
 - [ ] DEMO: t-rex with "smooth" scrolling background
