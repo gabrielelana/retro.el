@@ -622,6 +622,15 @@ TC is the transparent color, a pixel of this color is not copied."
         (user-error "missing handler for key %s" key))))
   (setf (retro-game-pending-events game) '()))
 
+(defun retro--update-every (seconds updatef)
+  "Will call UPDATEF as update function every SECONDS."
+  (let ((since-last-update 0.0))
+    (lambda (elapsed game-state canvas)
+      (setq since-last-update (+ since-last-update elapsed))
+      (when (> since-last-update seconds)
+        (funcall updatef since-last-update game-state canvas)
+        (setq since-last-update 0.0)))))
+
 (defun retro--handle-quit (_game-state game)
   "Signal the game to quit."
   (setf (retro-game-quit-p game) t))
