@@ -7,7 +7,7 @@ Longer description of the task
 - [ ] Something to do
 - [ ] Something to do
 
-* Refile [7/37]
+* Refile [8/38]
 Tasks to be refiled somewhere else in this project
 
 - [X] test load tile from file ~with-content-file~ macro
@@ -28,18 +28,18 @@ Tasks to be refiled somewhere else in this project
 - [X] FIX: retro--game-loop must return t
 - [X] clip sprites when they are partially inside the canvas, do nothing when they are outside
 - [X] DEMO: walking pink monster with bending space (when goes outside from the right comes back from the left)
-- [-] DEMO: game of life (see http://www.conwaylife.com/ref/lexicon/lex.htm or https://www.conwaylife.com/patterns/ for ASCII patterns)
-  - [ ] implement game of life logic
+- [X] DEMO: game of life (see http://www.conwaylife.com/ref/lexicon/lex.htm or https://www.conwaylife.com/patterns/ for ASCII patterns)
+  - [X] implement game of life logic
   - [X] game `:update-every <seconds>` to make a fixed tick, use a wrapper function for the given `:update` function
   - [X] handle mouse click events (keypress . key) || (mouseclick . (x . y))
-  - [ ] retro-game macro
-  - [ ] import data from ASCII patterns above
+  - [X] import data from ASCII patterns above
 - [ ] DEMO: t-rex with "smooth" scrolling background
   - [ ] load sprite from file with multiple plays (plays[name] -> frames[index] -> frame)
   - [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates :-/
   - [ ] scroll background based on time and not fixed amount (100px per second = velocity)?
   - [ ] add clouds
 - [ ] DEMO: Captain America walking in every direction -> replace move demo?
+- [ ] retro-game macro
 - [ ] add bounding box to sprite and tiles
 - [ ] benchmarks of different scenarios to evaluate possible performance improvement strategies
 - [ ] test with calibrate.sprite and clipping with buttercup?
