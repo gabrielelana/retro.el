@@ -692,6 +692,7 @@ TC is the transparent color, a pixel of this color is not copied."
     (if (retro-game-quit-p game)
         (funcall (retro-game-quit game))
       (run-with-timer 0.025 nil 'retro--game-loop game game-state now)
+      (garbage-collect-maybe 4)         ; on probation, don't know if it's good or bad
       t)))
 
 
