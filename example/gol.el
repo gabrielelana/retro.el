@@ -21,6 +21,10 @@
 ;;; Commentary:
 
 ;; Game of Life
+;;
+;; ASCII patterns of interesting configurations are taken from:
+;; - https://www.conwaylife.com/ref/lexicon/lex.htm
+;; - https://www.conwaylife.com/patterns
 
 ;;; Code:
 
@@ -56,6 +60,9 @@ cell, as if by reproduction.
 
 (defun universe-set! (universe xy cell)
   (ht-set! universe xy cell))
+
+(defun universe-reset! (universe)
+  (ht-clear! universe))
 
 (defun universe-get (universe xy)
   (ht-get universe xy 'dead))
@@ -105,7 +112,20 @@ cell, as if by reproduction.
   (garbage-collect)
   (when (not (nth 1 game-state))
     (cl-incf (nth 2 game-state))
-    (setf (car game-state) (universe-evolve (car game-state)))))
+    (let* ((patterns (nth 3 game-state))
+           (pattern-index (nth 4 game-state))
+           (pattern (nth pattern-index patterns)))
+      (if (> (nth 3 pattern) (nth 2 game-state))
+          (setf (car game-state) (universe-evolve (car game-state)))
+        ;; switch pattern
+        (setf (nth 2 game-state) 0
+              (nth 4 game-state) (% (1+ (nth 4 game-state)) (seq-length patterns)))
+        (setq pattern (nth (nth 4 game-state) patterns))
+        (universe-reset! (car game-state))
+        (setf (car game-state) (load-pattern-at (car game-state)
+                                                (nth 0 pattern)
+                                                (nth 1 pattern)
+                                                (nth 2 pattern)))))))
 
 (defun gol-show-render (game-state canvas)
   (let ((pixels (retro-canvas-pixels canvas))
@@ -114,7 +134,10 @@ cell, as if by reproduction.
         (color (retro--add-color-to-palette "#ffffff"))
         (x 0)
         (y 0))
-    (message "[%d] %s" (nth 2 game-state) (if (nth 1 game-state) "pause" "play"))
+    (message "[%s:%s] %s"
+             (file-name-base (nth 2 (nth (nth 4 game-state) (nth 3 game-state))))
+             (nth 2 game-state)
+             (if (nth 1 game-state) "pause" "play"))
     (dolist (xy (universe-alives-coordinates (car game-state)))
       (setq x (car xy) y (- height (cdr xy) 1))
       (when (and (>= x 0)
@@ -124,12 +147,18 @@ cell, as if by reproduction.
         (retro--plot-pixel x y color pixels width)))))
 
 (defun gol-show-init ()
-  (let ((u (universe-create)))
-    ;; (load-pattern-at u 20 35 "./glider-duplicator.cells")
-    ;; (load-pattern-at u 60 60  "./ant-stretcher.cells")
-    ;; (load-pattern-at u 30 40  "./b52.cells")
-    ;; (load-pattern-at u 35 25  "./fanout.cells")
-    (load-pattern-at u 30 40 "./against-the-grain.cells")
+  (let ((u (universe-create))
+        (patterns '((20 35 "./asset/glider-duplicator.cells" 300)
+                    (60 60  "./asset/ant-stretcher.cells" 250)
+                    (30 40  "./asset/b52.cells" 500)
+                    (35 25  "./asset/fanout.cells" 500)
+                    (30 40 "./asset/against-the-grain.cells" 100)))
+        (pattern-index 0))
+    (load-pattern-at u
+                     (nth 0 (nth pattern-index patterns))
+                     (nth 1 (nth pattern-index patterns))
+                     (nth 2 (nth pattern-index patterns)))
+    ;; Easy alternative
     ;; (universe-set! u (cons 2 2) 'alive)
     ;; (universe-set! u (cons 2 3) 'alive)
     ;; (universe-set! u (cons 2 4) 'alive)
@@ -137,6 +166,8 @@ cell, as if by reproduction.
      u                                  ; universe
      nil                                ; pause
      0                                  ; generation number
+     patterns                           ; ((x y file-path #evolutions))
+     pattern-index                      ; pattern index
      )))
 
 (defun load-pattern-at (universe x y file-path)
