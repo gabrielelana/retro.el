@@ -7,45 +7,32 @@ Longer description of the task
 - [ ] Something to do
 - [ ] Something to do
 
-* Refile [8/38]
+* Refile [0/35]
 Tasks to be refiled somewhere else in this project
 
-- [X] test load tile from file ~with-content-file~ macro
-      #+BEGIN_EXAMPLE
-      (let ((sprite-file (make-temp-file "retro-test")))
-        (with-content-file sprite-file
-          '("5 5 1 #000000"
-            "--"
-            "#ff0000  #00ff00 #0000ff"
-            "#00ff00  #0000ff #ff0000"
-            "#0000ff  #ff0000 #00ff00")
-           ;; here the file has been written and can be used
-           ) ;; here the file has been closed and deleted
-         )
-      #+END_EXAMPLE
-- [X] test load sprite from file
-- [X] test load tile/sprite from file with comments
-- [X] FIX: retro--game-loop must return t
-- [X] clip sprites when they are partially inside the canvas, do nothing when they are outside
-- [X] DEMO: walking pink monster with bending space (when goes outside from the right comes back from the left)
-- [X] DEMO: game of life (see http://www.conwaylife.com/ref/lexicon/lex.htm or https://www.conwaylife.com/patterns/ for ASCII patterns)
-  - [X] implement game of life logic
-  - [X] game `:update-every <seconds>` to make a fixed tick, use a wrapper function for the given `:update` function
-  - [X] handle mouse click events (keypress . key) || (mouseclick . (x . y))
-  - [X] import data from ASCII patterns above
 - [ ] DEMO: t-rex with "smooth" scrolling background
   - [ ] load sprite from file with multiple plays (plays[name] -> frames[index] -> frame)
   - [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates :-/
   - [ ] scroll background based on time and not fixed amount (100px per second = velocity)?
   - [ ] add clouds
 - [ ] DEMO: Captain America walking in every direction -> replace move demo?
+- [ ] add ~garbage-collect~ after each game loop
+- [ ] how to check if a file/function is byte compiled
+- [ ] how to check if a file/function is natively compiled
+- [ ] ~assert~ that it's only checked if it's not byte compiled aka optimized? Or if debugging is turned on
+  - [ ] when are macros really expanded?
 - [ ] retro-game macro
 - [ ] add bounding box to sprite and tiles
+- [ ] README.org
+  - [ ] List of references to other attempts and solutions to graphics in Emacs.
 - [ ] benchmarks of different scenarios to evaluate possible performance improvement strategies
 - [ ] test with calibrate.sprite and clipping with buttercup?
 - [ ] learn about game engines (dragonfly book)
 - [ ] learn about defclass and defmethod && how to handle state machines in Common Lisp
 - [ ] something for gravity, velocity and damping + ground
+  - [ ] https://dthompson.us/projects/chickadee.html
+  - [ ] https://dthompson.us/manuals/chickadee/Rectangles.html
+  - [ ] https://dthompson.us/manuals/chickadee/Tweening.html
 - [ ] render based on time passed (see https://gameprogrammingpatterns.com/game-loop.html)
 - [ ] collision detection between elements
 - [ ] loading fonts
@@ -54,7 +41,6 @@ Tasks to be refiled somewhere else in this project
 - [ ] ~(retro--sprite-flip-v sprite)~
 - [ ] retro--tile-flip-v
 - [ ] flip-v
-- [X] fix: how to properly import ht library to make flycheck happy
 - [ ] garbage collection trick?
 - [ ] extract example and ask for possible improvements on emacs-devel ml
 - [ ] add hook on window resize -> font dimension resize
@@ -69,7 +55,7 @@ Tasks to be refiled somewhere else in this project
 - [ ] game: pico-8 emulator || similar platform
 - [ ] game: space invaders original ROM
 - [ ] game: game boy emulator?
-- [ ] game: processing clone?
+- [ ] game: [[https://processing.org][processing]] clone?
 
 * Unrelated
 Tasks unrelated to this project

@@ -819,6 +819,7 @@ TC is the transparent color, a pixel of this color is not copied."
 ;;; loading images https://javl.github.io/image2cpp/
 ;;; physics https://2dengine.com/?p=platformers
 ;;; physics https://www.youtube.com/playlist?list=PLtrSb4XxIVbpZpV65kk73OoUcIrBzoSiO
+;;; take inspiration from: https://dthompson.us/projects/chickadee.html
 ;;; sprite https://penusbmic.itch.io/free-dungeon-ruins-tileset
 
 ;; (progn
