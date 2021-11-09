@@ -7,16 +7,16 @@ Longer description of the task
 - [ ] Something to do
 - [ ] Something to do
 
-* Refile [0/35]
+* Refile [1/35]
 Tasks to be refiled somewhere else in this project
 
-- [ ] DEMO: t-rex with "smooth" scrolling background
+- [-] DEMO: t-rex with "smooth" scrolling background
   - [ ] load sprite from file with multiple plays (plays[name] -> frames[index] -> frame)
-  - [ ] FIX: t-rex-demo is jumping on the x instead of the y coordinates :-/
-  - [ ] scroll background based on time and not fixed amount (100px per second = velocity)?
+  - [X] FIX: t-rex-demo is jumping on the x instead of the y coordinates :-/
+  - [X] scroll background based on time and not fixed amount (100px per second = velocity)?
   - [ ] add clouds
 - [ ] DEMO: Captain America walking in every direction -> replace move demo?
-- [ ] add ~garbage-collect~ after each game loop
+- [X] add ~garbage-collect~ after each game loop
 - [ ] how to check if a file/function is byte compiled
 - [ ] how to check if a file/function is natively compiled
 - [ ] ~assert~ that it's only checked if it's not byte compiled aka optimized? Or if debugging is turned on
@@ -25,14 +25,17 @@ Tasks to be refiled somewhere else in this project
 - [ ] add bounding box to sprite and tiles
 - [ ] README.org
   - [ ] List of references to other attempts and solutions to graphics in Emacs.
+  - [ ] Explain what's the purpose of the library
+  - [ ] Explain what's the strategy to solve previous attempt's problems
+  - [ ] https://dev.to/github/how-to-create-the-perfect-readme-for-your-open-source-project-1k69
 - [ ] benchmarks of different scenarios to evaluate possible performance improvement strategies
 - [ ] test with calibrate.sprite and clipping with buttercup?
 - [ ] learn about game engines (dragonfly book)
 - [ ] learn about defclass and defmethod && how to handle state machines in Common Lisp
 - [ ] something for gravity, velocity and damping + ground
-  - [ ] https://dthompson.us/projects/chickadee.html
-  - [ ] https://dthompson.us/manuals/chickadee/Rectangles.html
-  - [ ] https://dthompson.us/manuals/chickadee/Tweening.html
+  - https://dthompson.us/projects/chickadee.html
+  - https://dthompson.us/manuals/chickadee/Rectangles.html
+  - https://dthompson.us/manuals/chickadee/Tweening.html
 - [ ] render based on time passed (see https://gameprogrammingpatterns.com/game-loop.html)
 - [ ] collision detection between elements
 - [ ] loading fonts
