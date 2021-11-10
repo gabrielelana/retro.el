@@ -44,11 +44,14 @@ Release ~retro.el~ version 0.0.1
 - [ ] Experiment performance impact of using ~defclass~ and ~defmethod~
 - [ ] Explore how to implement state machines in common lisp
 
-* Refile [1/35]
+* Refile [0/30]
 Tasks to be refiled somewhere else in this project
 
 - [ ] DEMO: Captain America walking in every direction -> replace move demo?
 - [ ] DEMO: Pink walk, jump, throw
+- [ ] disable buffer selection
+- [ ] disable cursor  ~(internal-show-cursor WINDOW SHOW)~
+- [ ] FIX: arrow keys still move point
 - [ ] ~tween-cons~
 - [ ] how to check if a file/function is byte compiled
 - [ ] how to check if a file/function is natively compiled
