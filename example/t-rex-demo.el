@@ -116,8 +116,8 @@
     (setq current-sprite running-sprite)
     (t-rex-sprite--create :jump (lambda (_)
                                   (setq jumping t
-                                        jumping-tween (tween-concat (tween 0.6 ground-y top-y 'ease-out-cubic)
-                                                                    (tween 0.4 top-y ground-y 'ease-in-cubic))
+                                        jumping-tween (tween-concat (tween 0.3 ground-y top-y 'ease-out-cubic)
+                                                                    (tween 0.3 top-y ground-y 'ease-in-cubic))
                                         current-sprite jumping-sprite))
                           :update (lambda (elapsed t-rex _canvas)
                                     (when jumping
@@ -143,15 +143,19 @@
         (t-rex-sprite-create :x 10
                              :y (- height 49)
                              :ground-y (- height 49)
-                             :top-y (- height 150))
+                             :top-y (- height 110))
         (retro--load-tile "./asset/t-rex-cloud.sprite" (- width 50) 24)
         ))
+
+;; (defun t-rex-demo-random-clouds (clouds)) -> clouds
+;; (defun t-rex-demo-random-cactus (cactus)) -> cactus
+;; (defun t-rex-demo-random-pterodactyl (pterodactyls)) -> pterodactyls
 
 (defun t-rex-demo-update (elapsed game-state canvas)
   (message "[%03d] elapsed: %fs" (nth 0 game-state) elapsed)
   (retro--scroll-background (nth 1 game-state) (round (* 200.0 elapsed)))
-  (setf (retro-tile-x (nth 3 game-state)) (- (retro-tile-x (nth 3 game-state)) (round (* 100.0 elapsed))))
   (funcall (t-rex-sprite-update (nth 2 game-state)) elapsed (nth 2 game-state) canvas)
+  (setf (retro-tile-x (nth 3 game-state)) (- (retro-tile-x (nth 3 game-state)) (round (* 100.0 elapsed))))
   (cl-incf (car game-state)))
 
 (defun t-rex-demo-render (game-state canvas)
@@ -161,8 +165,8 @@
 
 (defun t-rex-demo ()
   "Show a T-Rex running."
-  (let ((width 800)
-        (height 200))
+  (let ((width 600)
+        (height 150))
     (retro-game-create :name "t-rex"
                        :resolution (cons width height)
                        :background-color (ht-get retro-palette-colors->index "#ffffff")
@@ -173,15 +177,6 @@
                        :init (apply-partially 't-rex-demo-init width height)
                        :update 't-rex-demo-update
                        :render 't-rex-demo-render)))
-
-;;; TODO: make random clouds appear and remove them when out of canvas
-;;; TODO: make random cluster of cactus appear and remove them when out of canvas
-;;; TODO: add collision between cactus and t-rex
-;;; TODO: make random pterodactyl appear and remove them when out of canvas
-;;; TODO: add dock animation for t-rex
-;;; TODO: add collision between pterodactyl and t-rex
-;;; TODO: make the "speed" of the game a variable and calculate everything accordingly
-;;; TODO: compute and show score
 
 (defun t-rex-demo-start ()
   (interactive)
