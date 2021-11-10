@@ -1,44 +1,68 @@
 #+TITLE: retro.el
 
-* XXX-001 Lorem ipsum dolor [0/3]
-Longer description of the task
+* RETRO-001 Dino running game [1/19]
+Implement "Dino running game" included in Chrome at ~chrome://dino/~
 
-- [ ] Something to do
-- [ ] Something to do
-- [ ] Something to do
+Reference for constants, code and assets
+- https://github.com/chirag64/t-rex-runner-bot/tree/gh-pages/img
+- https://github.com/wayou/t-rex-runner/blob/gh-pages/index.js
 
-* Refile [1/35]
-Tasks to be refiled somewhere else in this project
+- [X] Change resolution to the original ~600x150~
+- [ ] Extract ~tweening~ functions to ~retro.el~ general library
+- [ ] Load sprite from file with multiple plays (plays[name] -> frames[index] -> frame)
+      ~(retro--sprite-play sprite "idle")~
+- [ ] Load fonts from file
+      ~(retro--load-font file-path)~
+- [ ] Plot text on screen with characters provided by a font
+      ~(retro--plot-text font "Hello World" X Y)~
+- [ ] Make random clouds appear and remove them when out of canvas
+- [ ] Make random cluster of cactus appear and remove them when out of canvas
+- [ ] Rename as ~dino.el~
+- [ ] Add collision between cactus an+d t-rex
+- [ ] Make random pterodactyl appear and remove them when out of canvas
+- [ ] Add dock animation for t-rex
+- [ ] Add collision between pterodactyl and t-rex
+- [ ] Make the "speed" of the game a variable and calculate everything accordingly
+- [ ] Compute and show score
+- [ ] Keep the highest score somewhere
+- [ ] Game over
+- [ ] Restart game after game over
+- [ ] Start with ~offline~ || ~dino~ autoloaded command
+- [ ] Release as ~dino.el~
 
-- [-] DEMO: t-rex with "smooth" scrolling background
-  - [ ] load sprite from file with multiple plays (plays[name] -> frames[index] -> frame)
-  - [X] FIX: t-rex-demo is jumping on the x instead of the y coordinates :-/
-  - [X] scroll background based on time and not fixed amount (100px per second = velocity)?
-  - [ ] add clouds
-- [ ] DEMO: Captain America walking in every direction -> replace move demo?
-- [X] add ~garbage-collect~ after each game loop
-- [ ] how to check if a file/function is byte compiled
-- [ ] how to check if a file/function is natively compiled
-- [ ] ~assert~ that it's only checked if it's not byte compiled aka optimized? Or if debugging is turned on
-  - [ ] when are macros really expanded?
-- [ ] retro-game macro
-- [ ] add bounding box to sprite and tiles
+* RETRO-002 Release 0.0.1 [0/6]
+Release ~retro.el~ version 0.0.1
+
 - [ ] README.org
   - [ ] List of references to other attempts and solutions to graphics in Emacs.
   - [ ] Explain what's the purpose of the library
   - [ ] Explain what's the strategy to solve previous attempt's problems
   - [ ] https://dev.to/github/how-to-create-the-perfect-readme-for-your-open-source-project-1k69
-- [ ] benchmarks of different scenarios to evaluate possible performance improvement strategies
+- [ ] Benchmarks of different scenarios to evaluate possible performance improvement strategies
+- [ ] Add ~retro-game~ macro
+- [ ] Documentation, at least for everything used in demos and ~dino.el~
+- [ ] Experiment performance impact of using ~defclass~ and ~defmethod~
+- [ ] Explore how to implement state machines in common lisp
+
+* Refile [1/35]
+Tasks to be refiled somewhere else in this project
+
+- [ ] DEMO: Captain America walking in every direction -> replace move demo?
+- [ ] DEMO: Pink walk, jump, throw
+- [ ] ~tween-cons~
+- [ ] how to check if a file/function is byte compiled
+- [ ] how to check if a file/function is natively compiled
+- [ ] ~assert~ that it's only checked if it's not byte compiled aka optimized? Or if debugging is turned on
+  - [ ] when are macros really expanded?
+- [ ] add bounding box to sprite and tiles
 - [ ] test with calibrate.sprite and clipping with buttercup?
 - [ ] learn about game engines (dragonfly book)
-- [ ] learn about defclass and defmethod && how to handle state machines in Common Lisp
 - [ ] something for gravity, velocity and damping + ground
   - https://dthompson.us/projects/chickadee.html
   - https://dthompson.us/manuals/chickadee/Rectangles.html
   - https://dthompson.us/manuals/chickadee/Tweening.html
 - [ ] render based on time passed (see https://gameprogrammingpatterns.com/game-loop.html)
 - [ ] collision detection between elements
-- [ ] loading fonts
 - [ ] track and display the fps somewhere
 - [ ] duff device to plot in buffer to reduce the number of while iterations, define macro (unrolled-times N (V M) BODY) with throw/catch
 - [ ] ~(retro--sprite-flip-v sprite)~
@@ -50,9 +74,6 @@ Tasks to be refiled somewhere else in this project
 - [ ] special mode buffer? create a major mode for retro mode?
 - [ ] major mode for sprite files with instant preview (side by side buffer)
 - [ ] utility to import an image file into a sprite file
-- [ ] game: offline chrome dinosaur
-  - https://github.com/chirag64/t-rex-runner-bot/tree/gh-pages/img
-  - https://github.com/wayou/t-rex-runner/blob/gh-pages/index.js
 - [ ] game: snake
 - [ ] game: flappy bird
 - [ ] game: pico-8 emulator || similar platform
