@@ -144,24 +144,41 @@
                              :y (- height 49)
                              :ground-y (- height 49)
                              :top-y (- height 110))
-        (retro--load-tile "./asset/t-rex-cloud.sprite" (- width 50) 24)
-        ))
-
-;; (defun t-rex-demo-random-clouds (clouds)) -> clouds
-;; (defun t-rex-demo-random-cactus (cactus)) -> cactus
-;; (defun t-rex-demo-random-pterodactyl (pterodactyls)) -> pterodactyls
+        (list (retro--load-tile "./asset/t-rex-cloud.sprite" (- width 50) 24))))
 
 (defun t-rex-demo-update (elapsed game-state canvas)
   (message "[%03d] elapsed: %fs" (nth 0 game-state) elapsed)
   (retro--scroll-background (nth 1 game-state) (round (* 200.0 elapsed)))
   (funcall (t-rex-sprite-update (nth 2 game-state)) elapsed (nth 2 game-state) canvas)
-  (setf (retro-tile-x (nth 3 game-state)) (- (retro-tile-x (nth 3 game-state)) (round (* 100.0 elapsed))))
+  (setf (nth 3 game-state) (t-rex-demo-update-clouds (nth 3 game-state) (retro-canvas-height canvas) elapsed))
   (cl-incf (car game-state)))
 
 (defun t-rex-demo-render (game-state canvas)
   (retro--plot-background (nth 1 game-state) canvas)
-  (funcall (t-rex-sprite-render (nth 2 game-state)) (nth 2 game-state) canvas)
-  (retro--plot-tile (nth 3 game-state) canvas))
+  (t-rex-demo-render-clouds (nth 3 game-state) canvas)
+  (funcall (t-rex-sprite-render (nth 2 game-state)) (nth 2 game-state) canvas))
+
+(defconst *t-rex-cloud-y* '(30 . 41))
+(defconst *t-rex-cloud-gap* '(100 . 300))
+(defconst *t-rex-cloud-velocity* 100.0)  ; pixels per second
+(defconst *t-rex-cloud-max* 6)
+
+(defun t-rex-demo-render-clouds (clouds canvas)
+  "Render clouds."
+  (dolist (cloud clouds)
+    (retro--plot-tile cloud canvas)))
+
+(defun t-rex-demo-update-clouds (clouds height elapsed)
+  "Update clouds."
+  (setf clouds (seq-filter (lambda (cloud) (> (+ (retro-tile-x cloud) (retro-tile-width cloud)) 0)) clouds))
+  (dolist (cloud clouds)
+    (setf (retro-tile-x cloud) (- (retro-tile-x cloud) (round (* *t-rex-cloud-velocity* elapsed)))))
+  (if (>= (seq-length clouds) *t-rex-cloud-max*)
+      clouds
+    (let ((last-cloud (car clouds))
+          (y (+ (car *t-rex-cloud-y*) (random (cdr *t-rex-cloud-y*))))
+          (gap (+ (car *t-rex-cloud-gap*) (random (cdr *t-rex-cloud-gap*)))))
+      (cons (retro--load-tile "./asset/t-rex-cloud.sprite" (+ gap (retro-tile-x last-cloud)) (- height y)) clouds))))
 
 (defun t-rex-demo ()
   "Show a T-Rex running."
