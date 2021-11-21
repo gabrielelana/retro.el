@@ -185,11 +185,11 @@ BACKGROUND-COLOR is the background color."
     (with-current-buffer (get-buffer-create buffer-name)
       (set-window-buffer window (current-buffer))
       ;; TODO: disable scrolling
+      (when (boundp 'hl-line-mode) (setq-local hl-line-mode nil))
       (setq-local visible-cursor nil
                   cursor-type nil
                   inhibit-modification-hooks t
                   inhibit-compacting-font-caches t
-                  hl-line-mode nil
                   global-hl-line-mode nil
                   bidi-inhibit-bpa t
                   buffer-read-only nil)
@@ -598,6 +598,7 @@ TC is the transparent color, a pixel of this color is not copied."
                                    :previous-canvas previous-canvas)))
     (suppress-keymap keymap)
     (dolist (key (mapcar 'car bind))
+      ;; TODO: replace string-search with something supported by previous versiones of emacs
       (if (string-search "mouse" (symbol-name key))
           (define-key keymap (kbd (symbol-name key)) (retro--handle-mouseclick key game))
         (define-key keymap (kbd (symbol-name key)) (retro--handle-keypress key game))))
@@ -692,7 +693,10 @@ TC is the transparent color, a pixel of this color is not copied."
     (if (retro-game-quit-p game)
         (funcall (retro-game-quit game))
       (run-with-timer 0.025 nil 'retro--game-loop game game-state now)
-      (garbage-collect-maybe 4)         ; on probation, don't know if it's good or bad
+      ;; TODO: on probation, don't know if it's good or bad.
+      ;; TODO: if good keep but check one time if garbage-collect-maybe is
+      ;; defined
+      (when (fboundp 'garbage-collect-maybe) (garbage-collect-maybe 4))
       t)))
 
 
