@@ -37,16 +37,16 @@
 (defun evolve (cell neighbors)
   "Evolve a CELL given its NEIGHBORS.
 
-Any live cell with fewer than two live neighbours dies, as if by
+Any live cell with fewer than two live neighbors dies, as if by
 underpopulation.
 
-Any live cell with two or three live neighbours lives on to the
+Any live cell with two or three live neighbors lives on to the
 next generation.
 
-Any live cell with more than three live neighbours dies, as if by
+Any live cell with more than three live neighbors dies, as if by
 overpopulation.
 
-Any dead cell with exactly three live neighbours becomes a live
+Any dead cell with exactly three live neighbors becomes a live
 cell, as if by reproduction.
 "
   (let ((alive-neighbors (seq-length (seq-filter (apply-partially 'eq 'alive) neighbors))))
@@ -67,8 +67,24 @@ cell, as if by reproduction.
 (defun universe-get (universe xy)
   (ht-get universe xy 'dead))
 
+(defun universe-evolve (universe)
+  (let ((next (universe-create))
+        (cells (ht-create)))
+    (cl-loop for alive in (universe-alives-coordinates universe) do
+             (ht-set! cells alive t)
+             (cl-loop for neighbour in (neighbors-coordinates alive) do
+                      (ht-set! cells neighbour t)))
+    (cl-loop for cell in (ht-keys cells) do
+             (universe-set! next cell (evolve (universe-get universe cell)
+                                              (universe-neighbors-cells universe cell))))
+    next))
+
 (defun universe-alives-coordinates (universe)
   (seq-filter (lambda (xy) (alive-p (universe-get universe xy))) (ht-keys universe)))
+
+(defun universe-neighbors-cells (universe xy)
+  (mapcar (apply-partially 'universe-get universe)
+          (neighbors-coordinates xy)))
 
 (defun neighbors-coordinates (xy)
   (list
@@ -81,25 +97,13 @@ cell, as if by reproduction.
    (cons     (car xy)  (1+ (cdr xy)))
    (cons (1+ (car xy)) (1+ (cdr xy)))))
 
-(defun universe-neighbors-cells (universe xy)
-  (mapcar (apply-partially 'universe-get universe)
-          (neighbors-coordinates xy)))
-
-;;; TODO: rewrite with cl-loop
-(defun universe-evolve (universe)
-  (let ((next (universe-create)))
-    (dolist (alive-xy (universe-alives-coordinates universe))
-      (universe-set! next alive-xy (evolve 'alive
-                                           (universe-neighbors-cells universe alive-xy)))
-      (dolist (neighbor-xy (neighbors-coordinates alive-xy))
-        (universe-set! next neighbor-xy (evolve (universe-get universe neighbor-xy)
-                                                (universe-neighbors-cells universe neighbor-xy)))))
-    next))
-
+
 ;;; Graphics
 
+(require 'cl-lib)
 (require 'retro)
 
+;;; TODO: extract as 'retro-update-every
 (defun update-every (seconds update)
   (let ((since-last-update 0.0))
     (lambda (elapsed game-state canvas)
@@ -108,24 +112,29 @@ cell, as if by reproduction.
         (funcall update since-last-update game-state canvas)
         (setq since-last-update 0.0)))))
 
+(cl-defstruct (gol (:constructor gol--create)
+                   (:copier nil))
+  "Game of life game state."
+  (universe nil :type ht)
+  (pause-p nil :type boolean)
+  (generation 0 :type number)
+  (patterns nil :type list)
+  (pattern-index 0 :type number))
+
+(defun gol-create (patterns)
+  (gol--create :universe (universe-create)
+               :pause-p nil
+               :generation 0
+               :patterns patterns
+               :pattern-index 0))
+
 (defun gol-show-update (_elapsed game-state _canvas)
-  (garbage-collect)
-  (when (not (nth 1 game-state))
-    (cl-incf (nth 2 game-state))
-    (let* ((patterns (nth 3 game-state))
-           (pattern-index (nth 4 game-state))
-           (pattern (nth pattern-index patterns)))
-      (if (> (nth 3 pattern) (nth 2 game-state))
-          (setf (car game-state) (universe-evolve (car game-state)))
-        ;; switch pattern
-        (setf (nth 2 game-state) 0
-              (nth 4 game-state) (% (1+ (nth 4 game-state)) (seq-length patterns)))
-        (setq pattern (nth (nth 4 game-state) patterns))
-        (universe-reset! (car game-state))
-        (setf (car game-state) (load-pattern-at (car game-state)
-                                                (nth 0 pattern)
-                                                (nth 1 pattern)
-                                                (nth 2 pattern)))))))
+  (when (not (gol-pause-p game-state))
+    (cl-incf (gol-generation game-state))
+    (let ((current-pattern (gol-current-pattern game-state)))
+      (if (> (nth 3 current-pattern) (gol-generation game-state))
+          (setf (gol-universe game-state) (universe-evolve (gol-universe game-state)))
+        (gol-load-next-pattern game-state)))))
 
 (defun gol-show-render (game-state canvas)
   (let ((pixels (retro-canvas-pixels canvas))
@@ -135,10 +144,10 @@ cell, as if by reproduction.
         (x 0)
         (y 0))
     (message "[%s:%s] %s"
-             (file-name-base (nth 2 (nth (nth 4 game-state) (nth 3 game-state))))
-             (nth 2 game-state)
-             (if (nth 1 game-state) "pause" "play"))
-    (dolist (xy (universe-alives-coordinates (car game-state)))
+             (file-name-base (nth 2 (gol-current-pattern game-state)))
+             (gol-generation game-state)
+             (if (gol-pause-p game-state) "pause" "play"))
+    (dolist (xy (universe-alives-coordinates (gol-universe game-state)))
       (setq x (car xy) y (- height (cdr xy) 1))
       (when (and (>= x 0)
                  (>= y 0)
@@ -147,47 +156,45 @@ cell, as if by reproduction.
         (retro--plot-pixel x y color pixels width)))))
 
 (defun gol-show-init ()
-  (let ((u (universe-create))
-        (patterns '((20 35 "./asset/glider-duplicator.cells" 300)
-                    (60 60  "./asset/ant-stretcher.cells" 250)
-                    (30 40  "./asset/b52.cells" 500)
-                    (35 25  "./asset/fanout.cells" 500)
-                    (30 40 "./asset/against-the-grain.cells" 100)))
-        (pattern-index 0))
-    (load-pattern-at u
-                     (nth 0 (nth pattern-index patterns))
-                     (nth 1 (nth pattern-index patterns))
-                     (nth 2 (nth pattern-index patterns)))
-    ;; Easy alternative
-    ;; (universe-set! u (cons 2 2) 'alive)
-    ;; (universe-set! u (cons 2 3) 'alive)
-    ;; (universe-set! u (cons 2 4) 'alive)
-    (list
-     u                                  ; universe
-     nil                                ; pause
-     0                                  ; generation number
-     patterns                           ; ((x y file-path #evolutions))
-     pattern-index                      ; pattern index
-     )))
+  (let ((game-state (gol-create '((20 35 "./asset/glider-duplicator.cells" 300)
+                                  (60 60  "./asset/ant-stretcher.cells" 250)
+                                  (30 40  "./asset/b52.cells" 500)
+                                  (35 25  "./asset/fanout.cells" 500)
+                                  (30 40 "./asset/against-the-grain.cells" 100)))))
+    (gol-load-current-pattern game-state)
+    game-state))
 
-(defun load-pattern-at (universe x y file-path)
-  (let ((current-char nil)
-        (xi x)
-        (yi y))
-    (with-temp-buffer
-      (insert-file-contents file-path)
-      (goto-char (point-min))
-      (while (not (eobp))
-        (setq current-char (char-after))
-        (cond ((eq ?O current-char)
-               (universe-set! universe (cons xi yi) 'alive)
-               (setq xi (1+ xi)))
-              ((eq ?\n current-char)
-               (setq yi (1+ yi)
-                     xi x))
-              (t (setq xi (1+ xi))))
-        (forward-char 1))))
-  universe)
+(defun gol-current-pattern (game-state)
+  "Current pattern in universe."
+  (nth (gol-pattern-index game-state) (gol-patterns game-state)))
+
+(defun gol-load-next-pattern (game-state)
+  "Load next pattern in universe."
+  (setf (gol-generation game-state) 0
+        (gol-pattern-index game-state) (% (1+ (gol-pattern-index game-state)) (seq-length (gol-patterns game-state))))
+  (gol-load-current-pattern game-state))
+
+(defun gol-load-current-pattern (game-state)
+  "Load current pattern in universe."
+  (let ((current-pattern (nth (gol-pattern-index game-state) (gol-patterns game-state)))
+        (universe (gol-universe game-state))
+        (current-char nil))
+    (universe-reset! universe)
+    (pcase-let ((`(,x ,y ,file-path) current-pattern))
+      (let ((xi x) (yi y))
+          (with-temp-buffer
+            (insert-file-contents file-path)
+            (goto-char (point-min))
+            (while (not (eobp))
+              (setq current-char (char-after))
+              (cond ((eq ?O current-char)
+                     (universe-set! universe (cons xi yi) 'alive)
+                     (setq xi (1+ xi)))
+                    ((eq ?\n current-char)
+                     (setq yi (1+ yi)
+                           xi x))
+                    (t (setq xi (1+ xi))))
+              (forward-char 1)))))))
 
 (defun gol-show ()
   "Show game of life"
@@ -199,24 +206,26 @@ cell, as if by reproduction.
                         :resolution (cons width height)
                         :background-color (retro--add-color-to-palette "#000000")
                         :bind `(("p" . (lambda (game-state _)
-                                         (setf (nth 1 game-state) (not (nth 1 game-state)))))
+                                         (setf (gol-pause-p game-state) (not (gol-pause-p game-state)))))
                                 ("n" . (lambda (game-state _)
-                                         (when (nth 1 game-state)
-                                           (cl-incf (nth 2 game-state))
-                                           (setf (car game-state) (universe-evolve (car game-state))))))
-                                ("<down-mouse-1>" . (lambda (game-state _ xy)
-                                                      (when (nth 1 game-state)
-                                                        (let ((u (car game-state))
-                                                              (x (car xy))
-                                                              (y (- ,height (cdr xy) 1)))
-                                                          (universe-set! u
-                                                                         (cons x y)
-                                                                         (if (alive-p (universe-get u (cons x y))) 'dead 'alive))))))
+                                         (when (gol-pause-p game-state)
+                                           (cl-incf (gol-generation game-state))
+                                           (setf (gol-universe game-state) (universe-evolve (gol-universe game-state))))))
+                                ("<down-mouse-1>" . (lambda (game-state _ click-jkgxy)
+                                                      (when (gol-pause-p game-state)
+                                                        (let ((cell-x (car click-xy))
+                                                              (cell-y (- ,height (cdr click-xy) 1)))
+                                                          (universe-set! (gol-universe game-state)
+                                                                         (cons cell-x cell-y)
+                                                                         (if (alive-p (universe-get (gol-universe game-state) (cons cell-x cell-y)))
+                                                                             'dead
+                                                                           'alive))))))
                                 ("q" . retro--handle-quit))
                         :init 'gol-show-init
                         :update (update-every 0.1 'gol-show-update)
                         :render 'gol-show-render))))
 
+
 ;;; Tests
 
 (ert-deftest gol-evolve ()
