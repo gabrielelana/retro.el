@@ -103,15 +103,6 @@ cell, as if by reproduction.
 (require 'cl-lib)
 (require 'retro)
 
-;;; TODO: extract as 'retro-update-every
-(defun update-every (seconds update)
-  (let ((since-last-update 0.0))
-    (lambda (elapsed game-state canvas)
-      (setq since-last-update (+ since-last-update elapsed))
-      (when (> since-last-update seconds)
-        (funcall update since-last-update game-state canvas)
-        (setq since-last-update 0.0)))))
-
 (cl-defstruct (gol (:constructor gol--create)
                    (:copier nil))
   "Game of life game state."
@@ -222,7 +213,7 @@ cell, as if by reproduction.
                                                                            'alive))))))
                                 ("q" . retro--handle-quit))
                         :init 'gol-show-init
-                        :update (update-every 0.1 'gol-show-update)
+                        :update (retro--update-every 0.1 'gol-show-update)
                         :render 'gol-show-render))))
 
 

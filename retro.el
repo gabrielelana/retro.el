@@ -649,13 +649,32 @@ TC is the transparent color, a pixel of this color is not copied."
             (t (user-error "missing handler for event %s" event)))))
   (setf (retro-game-pending-events game) '()))
 
-(defun retro--update-every (seconds updatef)
-  "Will call UPDATEF as update function every SECONDS."
+(defun retro--update-every (seconds update)
+  "Make call the UPDATE function ~ every x SECONDS.
+
+Normally the update function gets called as soon as possible,
+generally is not predictable how much time passes between one
+call and the next.
+
+Because of that generally the update function should take in
+consideration the amout of time passed in between calls (given as
+parameter) to update stuff in the game state.
+
+In some situation is more than acceptable to be called with
+regularity every a certain amout of time has passed (ex. 0.5
+seconds).
+
+To do that wrap your update function with this function like
+
+    (retro-game ...
+                :update (update-every 0.5 'your-update-function)
+                ...)
+"
   (let ((since-last-update 0.0))
     (lambda (elapsed game-state canvas)
       (setq since-last-update (+ since-last-update elapsed))
       (when (> since-last-update seconds)
-        (funcall updatef since-last-update game-state canvas)
+        (funcall update since-last-update game-state canvas)
         (setq since-last-update 0.0)))))
 
 (defun retro--handle-quit (_game-state game)
