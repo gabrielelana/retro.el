@@ -224,14 +224,16 @@ BACKGROUND-COLOR is the background color."
 (defun retro--vector-clip-blit (sv sx0 sy0 sx1 sy1 sw dv dx dy dw tc)
   "Copy clip from source vector to destination vector.
 
-SV is the source vector.
-(SX0, SY0) coordinates of clip's top left corner in source vector.
-(SX1, SY1) coordinates of clip's bottom right corner in the source vector.
-SW is the width of the source vector.
-DV is the destination vector.
-(DX, DY) coordinates of clip's top left corner in the destination vector.
-DW is the width of the destination vector.
-TC is the transparent color, a pixel of this color is not copied."
+- SV is the source vector.
+- (SX0, SY0) coordinates of clip's top left corner in source
+  vector.
+- (SX1, SY1) coordinates of clip's bottom right corner in the
+source vector. SW is the width of the source vector. DV is the
+destination vector.
+- (DX, DY) coordinates of clip's top left corner in the
+destination vector. DW is the width of the destination vector.
+- TC is the transparent color of the source vector, a pixel of
+this color is not copied."
   (let* ((si (+ (* sy0 sw) sx0))        ; index in source vector
          (di (+ (* dy dw) dx))          ; index in destination vector
          (cw (1+ (- sx1 sx0)))          ; clip width
@@ -867,7 +869,7 @@ To do that wrap your update function with this function like
     (setq-local buffer-read-only t)))
 
 
-;;; Plot
+;;; Plot shapes
 
 (defun retro--plot-filled-rectangle (x0 y0 x1 y1 color canvas)
   "Plot a filled rectangle with COLOR from (X0, Y0) to (X1, Y1) in CANVAS.
