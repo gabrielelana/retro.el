@@ -443,78 +443,167 @@ TC is the transparent color, a pixel of this color is not copied."
   "Represent a sprite in a game."
   (x 0 :type number)
   (y 0 :type number)
+  (current-play nil :type retro-play-p)
+  (plays nil :type ht-p))
+
+(cl-defstruct (retro-play (:constructor retro--play-create)
+                          (:copier nil))
+  "Represent a play for a sprite."
+  (name nil :type string)
   (width 0 :type number)
   (height 0 :type number)
   (frame-i 0 :type number)
   (frame-n 0 :type number)
-  (transparent-color 0 :type number)
-  (frames nil :type vector))
+  (frames nil :type vector)
+  (transparent-color 0 :type number))
 
+(defmacro retro-sprite-width (sprite)
+  `(retro-play-width (retro-sprite-current-play ,sprite)))
+
+(defmacro retro-sprite-height (sprite)
+  `(retro-play-height (retro-sprite-current-play ,sprite)))
+
+(defmacro retro-sprite-frame (sprite)
+  `(aref (retro-play-frames (retro-sprite-current-play ,sprite))
+         (retro-play-frame-i (retro-sprite-current-play ,sprite))))
+
+(defmacro retro-sset (struct-type field-name struct-value field-value)
+  `(setf (,(intern (format "%s-%s" (symbol-name struct-type) (symbol-name field-name))) ,struct-value) ,field-value))
+
+(defmacro retro-sget (struct-type field-name struct-value)
+  `(,(intern (format "%s-%s" (symbol-name struct-type) (symbol-name field-name))) ,struct-value))
+
+(defun retro--skip-comments ()
+  "Skip comments line in current buffer."
+  (while (and (not (eobp)) (string-match-p "^\\s-*//" (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+    (forward-line 1)))
+
+;;; Load sprite from file
 (defun retro--load-sprite (file-path &optional x y)
   "Load a SPRITE from FILE-PATH."
   (with-temp-buffer
     (insert-file-contents file-path)
     (goto-char (point-min))
-    (let* ((header (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
-           (tokens (split-string header))
-           (width (string-to-number (nth 0 tokens)))
-           (height (string-to-number (nth 1 tokens)))
-           (frame-n (string-to-number (nth 2 tokens)))
-           (frame-i 0)
-           (transparent-color (nth 3 tokens))
-           (current-line nil)
-           (current-frame nil)
-           (frames (make-vector frame-n nil))
-           (i 0))
-      (forward-line 1)
+    (retro--skip-comments)
+    (let ((sprite (retro--sprite-create :x (or x 0)
+                                        :y (or y 0)
+                                        :current-play nil
+                                        :plays (ht-create)))
+          (current-play nil))
       (while (not (eobp))
-        (setq current-line (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
-        (cond ((string-match-p "^\\s-*--?" current-line)
-               (setq current-frame (make-vector (* width height) 0)
-                     i 0)
-               (aset frames frame-i current-frame)
-               (setq frame-i (1+ frame-i)))
-              ((string-match-p "^\\s-*//" current-line)
-               ;; skip comments
-               t)
-              (t (dolist (color (split-string current-line))
-                   (aset current-frame i (retro--add-color-to-palette color))
-                   (cl-incf i))))
-        (forward-line 1))
-      (retro--sprite-create :x (or x 0)
-                            :y (or y 0)
-                            :width width
-                            :height height
-                            :frame-i 0
-                            :frame-n frame-n
-                            :transparent-color (retro--add-color-to-palette transparent-color)
-                            :frames frames))))
+        (setq current-play (retro--parse-sprite-play))
+        (ht-set (retro-sprite-plays sprite) (retro-play-name current-play) current-play)
+        (when (null (retro-sprite-current-play sprite))
+          (setf (retro-sprite-current-play sprite) current-play)))
+      sprite)))
 
-;;; TODO: remove duplication with retro--move-tile
+(defun retro--parse-sprite-play ()
+  "Parse current buffer and create a play for a sprite."
+  ;; TODO: extract regular expressions
+  (if (not (string-match-p "^\\s-*>>" (buffer-substring-no-properties
+                                       (line-beginning-position)
+                                       (line-end-position))))
+      nil
+    (let* ((header (buffer-substring-no-properties
+                    (line-beginning-position)
+                    (line-end-position)))
+           (tokens (split-string header))
+           (name (nth 1 tokens))
+           (frame-count (string-to-number (nth 2 tokens)))
+           (width (string-to-number (nth 3 tokens)))
+           (height (string-to-number (nth 4 tokens)))
+           (transparent-color (nth 5 tokens))
+           (frames (make-vector frame-count nil)))
+      (dotimes (i frame-count)
+        (forward-line 1)
+        (aset frames i (retro--parse-play-frame width height)))
+      (retro--play-create :name name
+                          :width width
+                          :height height
+                          :frame-i 0
+                          :frame-n frame-count
+                          :frames frames
+                          :transparent-color (retro--add-color-to-palette transparent-color)))))
+
+(defun retro--parse-play-frame (width height)
+  "Parse current buffer and create a frame (WIDTH x HEIGHT) for a sprite."
+  (let ((current-frame (make-vector (* width height) 0))
+        (current-line "")
+        (i 0))
+    (when (eobp)
+      (error "Unexpected end of buffer, expected frame, sprite file corrupted"))
+    (retro--skip-comments)
+    (setq current-line (buffer-substring-no-properties
+                        (line-beginning-position)
+                        (line-end-position)))
+    (while (and (not (eobp)) (not (string-match-p "^\\s-*\\(--\\|>>\\)" current-line)))
+      (dolist (color (split-string current-line))
+        (aset current-frame i (retro--add-color-to-palette color))
+        (cl-incf i))
+      (forward-line 1)
+      (retro--skip-comments)
+      (setq current-line (buffer-substring-no-properties
+                          (line-beginning-position)
+                          (line-end-position))))
+    current-frame))
+
+;;; Set the current play for a sprite
+(defun retro--play-sprite (sprite play-name)
+  "Set play with PLAY-NAME as current play in SPRITE."
+  (when (not (ht-contains-p (retro-sprite-plays sprite) play-name))
+    (error (format "Sprite doesn not support play with name `%s`" play-name)))
+  (setf (retro-sprite-current-play sprite) (ht-get (retro-sprite-plays sprite) play-name)
+        (retro-play-frame-i (retro-sprite-current-play sprite)) 0))
+
+;;; Move sprite
 (defun retro--move-sprite (sprite dx dy x0 y0 x1 y1)
   "Move sprite"
-  (let ((x (retro-sprite-x sprite))
-        (y (retro-sprite-y sprite))
-        (w (1- (retro-sprite-width sprite)))
-        (h (1- (retro-sprite-height sprite))))
+  (let* ((x (retro-sprite-x sprite))
+         (y (retro-sprite-y sprite))
+         (current-play (retro-sprite-current-play sprite))
+         (w (1- (retro-play-width current-play)))
+         (h (1- (retro-play-height current-play))))
+    ;; TODO: what's the meaning of this? Maybe done before clipping? If yes, remove!!!
     (when (/= dx 0)
       (setf (retro-sprite-x sprite) (if (> dx 0)
-                                    (min (+ x dx) (- x1 w))
-                                  (max (+ x dx) x0))))
+                                        (min (+ x dx) (- x1 w))
+                                      (max (+ x dx) x0))))
     (when (/= dy 0)
       (setf (retro-sprite-y sprite) (if (> dy 0)
-                                    (min (+ y dy) (- y1 h))
-                                  (max (+ y dy) y0))))))
+                                        (min (+ y dy) (- y1 h))
+                                      (max (+ y dy) y0))))))
 
+;;; Advance to the next frame of the current play
+(defun retro--next-frame-sprite (sprite)
+  "Make SPRITE take the next animation frame."
+  (setf (retro-play-frame-i (retro-sprite-current-play sprite))
+        (% (1+ (retro-play-frame-i (retro-sprite-current-play sprite)))
+           (retro-play-frame-n (retro-sprite-current-play sprite)))))
+
+;;; Flip horizonally all the frames of the current play
+(defun retro--flip-h-sprite (sprite)
+  "Flip horizontally every frame of the current play of SPRITE."
+  (let ((width (retro-play-width (retro-sprite-current-play sprite)))
+        (height (retro-play-height (retro-sprite-current-play sprite))))
+    (dotimes (i (retro-play-frame-n (retro-sprite-current-play sprite)))
+      (retro--flip-h-vector (aref (retro-play-frames (retro-sprite-current-play sprite)) i) width height))))
+
+;;; Flip vertically all the frames of the current play
+(defun retro--flip-v-sprite (_sprite)
+  "Flip vertically every frame of the current play of SPRITE."
+  (error "Not implemented."))
+
+;;; Plot current frame of current play of sprite on canvas
 (defun retro--plot-sprite (sprite canvas)
-  "Plot a SPRITE on CANVAS."
+  "Plot current frame of current play for SPRITE on CANVAS."
   ;; TODO: duplicated in retro--plot-tile
   (let* ((cw (retro-canvas-width canvas))
          (ch (retro-canvas-height canvas))
-         (sw (retro-sprite-width sprite))
-         (sh (retro-sprite-height sprite))
          (sx (retro-sprite-x sprite))
          (sy (retro-sprite-y sprite))
+         (pl (retro-sprite-current-play sprite))
+         (sw (retro-play-width pl))
+         (sh (retro-play-height pl))
          ;; coordinates are relative to canvas
          (cl (cons 0 0))                ; canvas top left corner
          (cr (cons (1- cw) (1- ch)))    ; canvar right bottom corner
@@ -530,7 +619,7 @@ TC is the transparent color, a pixel of this color is not copied."
          (sy1 (min (+ (cdr cl) (cdr cr))
                    (+ (cdr sl) (cdr sr)))))
     (when (and (<= sx0 sx1) (<= sy0 sy1))
-      (retro--vector-clip-blit (aref (retro-sprite-frames sprite) (retro-sprite-frame-i sprite))
+      (retro--vector-clip-blit (aref (retro-play-frames pl) (retro-play-frame-i pl))
                                ;; convert sx0 sy0 sx1 sy1 to sprite relative coordinates
                                (- sx0 sx)
                                (- sy0 sy)
@@ -541,20 +630,7 @@ TC is the transparent color, a pixel of this color is not copied."
                                sx0
                                sy0
                                cw
-                               (retro-sprite-transparent-color sprite)))))
-
-(defun retro--next-frame-sprite (sprite)
-  "Make SPRITE take the next animation frame."
-  (setf (retro-sprite-frame-i sprite)
-        (% (1+ (retro-sprite-frame-i sprite))
-           (retro-sprite-frame-n sprite))))
-
-(defun retro--flip-h-sprite (sprite)
-  "Flip horizontally every frame of the SPRITE."
-  (let ((width (retro-sprite-width sprite))
-        (height (retro-sprite-height sprite)))
-    (dotimes (i (retro-sprite-frame-n sprite))
-      (retro--flip-h-vector (aref (retro-sprite-frames sprite) i) width height))))
+                               (retro-play-transparent-color pl)))))
 
 
 ;;; Game

@@ -30,41 +30,25 @@
 (require 'retro (expand-file-name "./../retro.el") t)
 (require 'retro (expand-file-name "./retro.el") t)
 
-;; (defvar one-clip-sprite '("3 3 #000000"
-;;                           ">> default 3"
-;;                           "--"
-;;                           "#ff0000  #000000 #000000"
-;;                           "#ff0000  #000000 #000000"
-;;                           "#ff0000  #000000 #000000"
-;;                           "--"
-;;                           "#000000  #ff0000 #000000"
-;;                           "#000000  #ff0000 #000000"
-;;                           "#000000  #ff0000 #000000"
-;;                           "--"
-;;                           "#000000  #000000 #ff0000"
-;;                           "#000000  #000000 #ff0000"
-;;                           "#000000  #000000 #ff0000"))
-
-(defvar simple-sprite '("3 3 3 #000000"
-                        "--"
-                        "#ff0000  #000000 #000000"
-                        "#ff0000  #000000 #000000"
-                        "#ff0000  #000000 #000000"
-                        "--"
-                        "#000000  #ff0000 #000000"
-                        "#000000  #ff0000 #000000"
-                        "#000000  #ff0000 #000000"
-                        "--"
-                        "#000000  #000000 #ff0000"
-                        "#000000  #000000 #ff0000"
-                        "#000000  #000000 #ff0000"))
+(defvar one-play-sprite '(">> default 3 3 3 #000000"
+                          "#ff0000  #000000 #000000"
+                          "#ff0000  #000000 #000000"
+                          "#ff0000  #000000 #000000"
+                          "--"
+                          "#000000  #ff0000 #000000"
+                          "#000000  #ff0000 #000000"
+                          "#000000  #ff0000 #000000"
+                          "--"
+                          "#000000  #000000 #ff0000"
+                          "#000000  #000000 #ff0000"
+                          "#000000  #000000 #ff0000"))
 
 (ert-deftest sprite-test-can-be-loaded ()
-  (with-content-file tile-file simple-sprite
-    (let ((sprite (retro--load-sprite tile-file)))
+  (with-content-file sprite-file one-play-sprite
+    (let ((sprite (retro--load-sprite sprite-file)))
       (should (retro-sprite-p sprite))
-      (let* ((frames (retro-sprite-frames sprite))
-             (pixels (aref frames (retro-sprite-frame-i sprite)))
+      (let* ((frames (retro-play-frames (retro-sprite-current-play sprite)))
+             (pixels (aref frames (retro-play-frame-i (retro-sprite-current-play sprite))))
              (color-0 (retro--add-color-to-palette "#000000"))
              (color-1 (retro--add-color-to-palette "#ff0000")))
         (should (equal color-1 (aref pixels 0)))
@@ -72,40 +56,9 @@
         (should (equal color-0 (aref pixels 2)))
         (should (equal color-1 (aref pixels 3)))))))
 
-(defvar simple-sprite-with-comments '("3 3 3 #000000"
-                                      "--"
-                                      "// this is a comment"
-                                      "#ff0000  #000000 #000000"
-                                      "#ff0000  #000000 #000000"
-                                      "// another"
-                                      "#ff0000  #000000 #000000"
-                                      "--"
-                                      "#000000  #ff0000 #000000"
-                                      "#000000  #ff0000 #000000"
-                                      "#000000  #ff0000 #000000"
-                                      "--"
-                                      "  // another"
-                                      "#000000  #000000 #ff0000"
-                                      "#000000  #000000 #ff0000"
-                                      "#000000  #000000 #ff0000"))
-
-(ert-deftest sprite-test-load-skips-comments ()
-  (with-content-file tile-file simple-sprite-with-comments
-    (let ((sprite (retro--load-sprite tile-file)))
-      (should (retro-sprite-p sprite))
-      (should (equal 3 (retro-sprite-frame-n sprite)))
-      (let* ((frames (retro-sprite-frames sprite))
-             (pixels (aref frames (retro-sprite-frame-i sprite)))
-             (color-0 (retro--add-color-to-palette "#000000"))
-             (color-1 (retro--add-color-to-palette "#ff0000")))
-        (should (equal color-1 (aref pixels 0)))
-        (should (equal color-0 (aref pixels 1)))
-        (should (equal color-0 (aref pixels 2)))
-        (should (equal color-1 (aref pixels 3)))))))
-
-(ert-deftest sprite-test-plot ()
-  (with-content-file tile-file simple-sprite
-    (let* ((sprite (retro--load-sprite tile-file))
+(ert-deftest sprite-test-can-be-plot ()
+  (with-content-file sprite-file one-play-sprite
+    (let* ((sprite (retro--load-sprite sprite-file))
            (color-0 (retro--add-color-to-palette "#000000"))
            (color-1 (retro--add-color-to-palette "#ff0000"))
            (canvas (retro-canvas-create :margin-left 0
@@ -125,15 +78,49 @@
       (should (equal color-0 (aref cpxs 7)))
       (should (equal color-0 (aref cpxs 8))))))
 
-(defvar simple-sprite-full '("3 3 1 #000000"
-                             "--"
+(defvar one-play-sprite-with-comments '("// header comment"
+                                        ">> default 3 3 3 #000000"
+                                        "// this is a comment"
+                                        "#ff0000  #000000 #000000"
+                                        "#ff0000  #000000 #000000"
+                                        "// this is a comment"
+                                        "#ff0000  #000000 #000000"
+                                        " // this is a comment"
+                                        "--"
+                                        "#000000  #ff0000 #000000"
+                                        "#000000  #ff0000 #000000"
+                                        "#000000  #ff0000 #000000"
+                                        "--"
+                                        "  // this is a comment"
+                                        "#000000  #000000 #ff0000"
+                                        "#000000  #000000 #ff0000"
+                                        "#000000  #000000 #ff0000"
+                                        " // this is a comment"
+                                        ))
+
+(ert-deftest sprite-test-load-skips-comments ()
+  (with-content-file tile-file one-play-sprite-with-comments
+    (let ((sprite (retro--load-sprite tile-file)))
+      (should (retro-sprite-p sprite))
+      (should (equal 3 (retro-play-frame-n (retro-sprite-current-play sprite))))
+      (let* ((frames (retro-play-frames (retro-sprite-current-play sprite)))
+             (pixels (aref frames (retro-play-frame-i (retro-sprite-current-play sprite))))
+             (color-0 (retro--add-color-to-palette "#000000"))
+             (color-1 (retro--add-color-to-palette "#ff0000")))
+        (should (equal color-1 (aref pixels 0)))
+        (should (equal color-0 (aref pixels 1)))
+        (should (equal color-0 (aref pixels 2)))
+        (should (equal color-1 (aref pixels 3)))))))
+
+
+(defvar simple-sprite-full '(">> default 1 3 3 #000000"
                              "#ffffff  #ffffff #ffffff"
                              "#ffffff  #ffffff #ffffff"
                              "#ffffff  #ffffff #ffffff"))
 
 (ert-deftest sprite-test-plot-bigger-than-canvas ()
-  (with-content-file tile-file simple-sprite-full
-    (let* ((sprite (retro--load-sprite tile-file))
+  (with-content-file sprite-file simple-sprite-full
+    (let* ((sprite (retro--load-sprite sprite-file))
            (color-1 (retro--add-color-to-palette "#ffffff"))
            (canvas (retro-canvas-create :margin-left 0
                                         :margin-top 0
@@ -141,13 +128,13 @@
                                         :height 2
                                         :background-color 0))
            (cpxs (retro-canvas-pixels canvas)))
-           (setf (retro-sprite-x sprite) 0)
-           (setf (retro-sprite-y sprite) 0)
-           (retro--plot-sprite sprite canvas)
-           (should (equal color-1 (aref cpxs 0)))
-           (should (equal color-1 (aref cpxs 1)))
-           (should (equal color-1 (aref cpxs 2)))
-           (should (equal color-1 (aref cpxs 3))))))
+      (setf (retro-sprite-x sprite) 0)
+      (setf (retro-sprite-y sprite) 0)
+      (retro--plot-sprite sprite canvas)
+      (should (equal color-1 (aref cpxs 0)))
+      (should (equal color-1 (aref cpxs 1)))
+      (should (equal color-1 (aref cpxs 2)))
+      (should (equal color-1 (aref cpxs 3))))))
 
 (ert-deftest sprite-test-plot-smaller-than-canvas ()
   (with-content-file tile-file simple-sprite-full
@@ -161,95 +148,165 @@
                                         :background-color 0))
            (cpxs (retro-canvas-pixels canvas)))
 
-           ;; 1 1 1 0 0  top left corner
-           ;; 1 1 1 0 0
-           ;; 1 1 1 0 0
-           ;; 0 0 0 0 0
-           ;; 0 0 0 0 0
-           (setf (retro-sprite-x sprite) 0)
-           (setf (retro-sprite-y sprite) 0)
-           (retro--plot-sprite sprite canvas)
-           (should (equal color-1 (aref cpxs 0)))
-           (should (equal color-1 (aref cpxs 1)))
-           (should (equal color-1 (aref cpxs 2)))
-           (should (equal color-0 (aref cpxs 3)))
-           (should (equal color-1 (aref cpxs 5)))
-           (should (equal color-1 (aref cpxs 6)))
-           (should (equal color-1 (aref cpxs 7)))
-           (should (equal color-0 (aref cpxs 8)))
-           (should (equal color-1 (aref cpxs 10)))
-           (should (equal color-1 (aref cpxs 11)))
-           (should (equal color-1 (aref cpxs 12)))
-           (should (equal color-0 (aref cpxs 13)))
-           (retro--reset-canvas canvas)
+      ;; 1 1 1 0 0  top left corner
+      ;; 1 1 1 0 0
+      ;; 1 1 1 0 0
+      ;; 0 0 0 0 0
+      ;; 0 0 0 0 0
+      (setf (retro-sprite-x sprite) 0)
+      (setf (retro-sprite-y sprite) 0)
+      (retro--plot-sprite sprite canvas)
+      (should (equal color-1 (aref cpxs 0)))
+      (should (equal color-1 (aref cpxs 1)))
+      (should (equal color-1 (aref cpxs 2)))
+      (should (equal color-0 (aref cpxs 3)))
+      (should (equal color-0 (aref cpxs 4)))
+      (should (equal color-1 (aref cpxs 5)))
+      (should (equal color-1 (aref cpxs 6)))
+      (should (equal color-1 (aref cpxs 7)))
+      (should (equal color-0 (aref cpxs 8)))
+      (should (equal color-0 (aref cpxs 9)))
+      (should (equal color-1 (aref cpxs 10)))
+      (should (equal color-1 (aref cpxs 11)))
+      (should (equal color-1 (aref cpxs 12)))
+      (should (equal color-0 (aref cpxs 13)))
+      (should (equal color-0 (aref cpxs 14)))
+      (should (equal color-0 (aref cpxs 15)))
+      (should (equal color-0 (aref cpxs 16)))
+      (should (equal color-0 (aref cpxs 17)))
+      (should (equal color-0 (aref cpxs 18)))
+      (should (equal color-0 (aref cpxs 19)))
+      (retro--reset-canvas canvas)
 
-           ;; 0 0 1 1 1  top right corner
-           ;; 0 0 1 1 1
-           ;; 0 0 1 1 1
-           ;; 0 0 0 0 0
-           ;; 0 0 0 0 0
-           (setf (retro-sprite-x sprite) 2)
-           (setf (retro-sprite-y sprite) 0)
-           (retro--plot-sprite sprite canvas)
-           (should (equal color-0 (aref cpxs 1)))
-           (should (equal color-1 (aref cpxs 2)))
-           (should (equal color-1 (aref cpxs 3)))
-           (should (equal color-1 (aref cpxs 4)))
-           (should (equal color-0 (aref cpxs 6)))
-           (should (equal color-1 (aref cpxs 7)))
-           (should (equal color-1 (aref cpxs 8)))
-           (should (equal color-1 (aref cpxs 9)))
-           (should (equal color-0 (aref cpxs 11)))
-           (should (equal color-1 (aref cpxs 12)))
-           (should (equal color-1 (aref cpxs 13)))
-           (should (equal color-1 (aref cpxs 14)))
-           (should (equal color-0 (aref cpxs 16)))
-           (should (equal color-0 (aref cpxs 17)))
-           (should (equal color-0 (aref cpxs 18)))
-           (should (equal color-0 (aref cpxs 19)))
-           (retro--reset-canvas canvas)
+      ;; 0 0 1 1 1  top right corner
+      ;; 0 0 1 1 1
+      ;; 0 0 1 1 1
+      ;; 0 0 0 0 0
+      ;; 0 0 0 0 0
+      (setf (retro-sprite-x sprite) 2)
+      (setf (retro-sprite-y sprite) 0)
+      (retro--plot-sprite sprite canvas)
+      (should (equal color-0 (aref cpxs 1)))
+      (should (equal color-1 (aref cpxs 2)))
+      (should (equal color-1 (aref cpxs 3)))
+      (should (equal color-1 (aref cpxs 4)))
+      (should (equal color-0 (aref cpxs 6)))
+      (should (equal color-1 (aref cpxs 7)))
+      (should (equal color-1 (aref cpxs 8)))
+      (should (equal color-1 (aref cpxs 9)))
+      (should (equal color-0 (aref cpxs 11)))
+      (should (equal color-1 (aref cpxs 12)))
+      (should (equal color-1 (aref cpxs 13)))
+      (should (equal color-1 (aref cpxs 14)))
+      (should (equal color-0 (aref cpxs 16)))
+      (should (equal color-0 (aref cpxs 17)))
+      (should (equal color-0 (aref cpxs 18)))
+      (should (equal color-0 (aref cpxs 19)))
+      (retro--reset-canvas canvas)
 
-           ;; TODO: bottom left corner
-           ;; TODO: bottom right corner
+      ;; 0 0 0 0 0  bottom right corner
+      ;; 0 0 0 0 0
+      ;; 0 0 1 1 1
+      ;; 0 0 1 1 1
+      ;; 0 0 1 1 1
+      (setf (retro-sprite-x sprite) 2)
+      (setf (retro-sprite-y sprite) 2)
+      (retro--plot-sprite sprite canvas)
+      (should (equal color-0 (aref cpxs 0)))
+      (should (equal color-0 (aref cpxs 1)))
+      (should (equal color-0 (aref cpxs 2)))
+      (should (equal color-0 (aref cpxs 3)))
+      (should (equal color-0 (aref cpxs 4)))
+      (should (equal color-0 (aref cpxs 5)))
+      (should (equal color-0 (aref cpxs 6)))
+      (should (equal color-0 (aref cpxs 7)))
+      (should (equal color-0 (aref cpxs 8)))
+      (should (equal color-0 (aref cpxs 9)))
+      (should (equal color-0 (aref cpxs 10)))
+      (should (equal color-0 (aref cpxs 11)))
+      (should (equal color-1 (aref cpxs 12)))
+      (should (equal color-1 (aref cpxs 13)))
+      (should (equal color-1 (aref cpxs 14)))
+      (should (equal color-0 (aref cpxs 15)))
+      (should (equal color-0 (aref cpxs 16)))
+      (should (equal color-1 (aref cpxs 17)))
+      (should (equal color-1 (aref cpxs 18)))
+      (should (equal color-1 (aref cpxs 19)))
+      (should (equal color-0 (aref cpxs 20)))
+      (should (equal color-0 (aref cpxs 21)))
+      (should (equal color-1 (aref cpxs 22)))
+      (should (equal color-1 (aref cpxs 23)))
+      (should (equal color-1 (aref cpxs 24)))
+      (retro--reset-canvas canvas)
 
-           ;; 0 0 0 0 0  center
-           ;; 0 1 1 1 0
-           ;; 0 1 1 1 0
-           ;; 0 1 1 1 0
-           ;; 0 0 0 0 0
-           (setf (retro-sprite-x sprite) 1)
-           (setf (retro-sprite-y sprite) 1)
-           (retro--plot-sprite sprite canvas)
-           ;; first row
-           (should (equal color-0 (aref cpxs 0)))
-           (should (equal color-0 (aref cpxs 1)))
-           (should (equal color-0 (aref cpxs 2)))
-           (should (equal color-0 (aref cpxs 3)))
-           (should (equal color-0 (aref cpxs 4)))
-           ;; second row
-           (should (equal color-0 (aref cpxs 5)))
-           (should (equal color-1 (aref cpxs 6)))
-           (should (equal color-1 (aref cpxs 7)))
-           (should (equal color-1 (aref cpxs 8)))
-           (should (equal color-0 (aref cpxs 9)))
-           ;; third row
-           (should (equal color-0 (aref cpxs 10)))
-           (should (equal color-1 (aref cpxs 11)))
-           (should (equal color-1 (aref cpxs 12)))
-           (should (equal color-1 (aref cpxs 13)))
-           (should (equal color-0 (aref cpxs 14)))
-           ;; fourth row
-           (should (equal color-0 (aref cpxs 15)))
-           (should (equal color-1 (aref cpxs 16)))
-           (should (equal color-1 (aref cpxs 17)))
-           (should (equal color-1 (aref cpxs 18)))
-           (should (equal color-0 (aref cpxs 19)))
-           ;; fifth row
-           (should (equal color-0 (aref cpxs 20)))
-           (should (equal color-0 (aref cpxs 21)))
-           (should (equal color-0 (aref cpxs 22)))
-           (should (equal color-0 (aref cpxs 23)))
-           (should (equal color-0 (aref cpxs 24))))))
+      ;; 0 0 0 0 0  bottom left corner
+      ;; 0 0 0 0 0
+      ;; 1 1 1 0 0
+      ;; 1 1 1 0 0
+      ;; 1 1 1 0 0
+      (setf (retro-sprite-x sprite) 0)
+      (setf (retro-sprite-y sprite) 2)
+      (retro--plot-sprite sprite canvas)
+      (should (equal color-0 (aref cpxs 0)))
+      (should (equal color-0 (aref cpxs 1)))
+      (should (equal color-0 (aref cpxs 2)))
+      (should (equal color-0 (aref cpxs 3)))
+      (should (equal color-0 (aref cpxs 4)))
+      (should (equal color-0 (aref cpxs 5)))
+      (should (equal color-0 (aref cpxs 6)))
+      (should (equal color-0 (aref cpxs 7)))
+      (should (equal color-0 (aref cpxs 8)))
+      (should (equal color-0 (aref cpxs 9)))
+      (should (equal color-1 (aref cpxs 10)))
+      (should (equal color-1 (aref cpxs 11)))
+      (should (equal color-1 (aref cpxs 12)))
+      (should (equal color-0 (aref cpxs 13)))
+      (should (equal color-0 (aref cpxs 14)))
+      (should (equal color-1 (aref cpxs 15)))
+      (should (equal color-1 (aref cpxs 16)))
+      (should (equal color-1 (aref cpxs 17)))
+      (should (equal color-0 (aref cpxs 18)))
+      (should (equal color-0 (aref cpxs 19)))
+      (should (equal color-1 (aref cpxs 20)))
+      (should (equal color-1 (aref cpxs 21)))
+      (should (equal color-1 (aref cpxs 22)))
+      (should (equal color-0 (aref cpxs 23)))
+      (should (equal color-0 (aref cpxs 24)))
+      (retro--reset-canvas canvas)
+
+      ;; 0 0 0 0 0  center
+      ;; 0 1 1 1 0
+      ;; 0 1 1 1 0
+      ;; 0 1 1 1 0
+      ;; 0 0 0 0 0
+      (setf (retro-sprite-x sprite) 1)
+      (setf (retro-sprite-y sprite) 1)
+      (retro--plot-sprite sprite canvas)
+      (should (equal color-0 (aref cpxs 0)))
+      (should (equal color-0 (aref cpxs 1)))
+      (should (equal color-0 (aref cpxs 2)))
+      (should (equal color-0 (aref cpxs 3)))
+      (should (equal color-0 (aref cpxs 4)))
+      (should (equal color-0 (aref cpxs 5)))
+      (should (equal color-1 (aref cpxs 6)))
+      (should (equal color-1 (aref cpxs 7)))
+      (should (equal color-1 (aref cpxs 8)))
+      (should (equal color-0 (aref cpxs 9)))
+      (should (equal color-0 (aref cpxs 10)))
+      (should (equal color-1 (aref cpxs 11)))
+      (should (equal color-1 (aref cpxs 12)))
+      (should (equal color-1 (aref cpxs 13)))
+      (should (equal color-0 (aref cpxs 14)))
+      (should (equal color-0 (aref cpxs 15)))
+      (should (equal color-1 (aref cpxs 16)))
+      (should (equal color-1 (aref cpxs 17)))
+      (should (equal color-1 (aref cpxs 18)))
+      (should (equal color-0 (aref cpxs 19)))
+      (should (equal color-0 (aref cpxs 20)))
+      (should (equal color-0 (aref cpxs 21)))
+      (should (equal color-0 (aref cpxs 22)))
+      (should (equal color-0 (aref cpxs 23)))
+      (should (equal color-0 (aref cpxs 24))))))
 
 (ert-deftest sprite-test-plot-interesction-with-canvas ()
   (with-content-file tile-file simple-sprite-full
