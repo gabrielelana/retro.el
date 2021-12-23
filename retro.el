@@ -772,6 +772,10 @@ To do that wrap your update function with this function like
                                  handler)
                            result))))))
 
+;;; compatibility with emacs versions < 28.1
+(when (not (fboundp 'garbage-collect-maybe))
+  (defun garbage-collect-maybe (_n) nil))
+
 (defun retro--game-loop (game &optional game-state last-time)
   "Game loop."
   (let* ((game-state (or game-state (funcall (retro-game-init game))))
@@ -790,10 +794,7 @@ To do that wrap your update function with this function like
     (if (retro-game-quit-p game)
         (funcall (retro-game-quit game))
       (run-with-timer 0.025 nil 'retro--game-loop game game-state now)
-      ;; TODO: on probation, don't know if it's good or bad.
-      ;; TODO: if good keep but check one time if garbage-collect-maybe is
-      ;; defined
-      (when (fboundp 'garbage-collect-maybe) (garbage-collect-maybe 4))
+      (garbage-collect-maybe 4)
       t)))
 
 
