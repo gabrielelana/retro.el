@@ -52,6 +52,9 @@
 (defvar retro-square-font-family "Kreative Square SM"
   "Font family used to create the illusion of pixels.")
 
+;; (defvar retro-square-font-family "Topaz-8"
+;;   "Font family used to create the illusion of pixels.")
+
 
 ;;; Palette
 
@@ -436,6 +439,167 @@ this color is not copied."
                            (retro-background-y background)
                            (retro-canvas-width canvas)
                            (retro-background-transparent-color background)))
+
+
+;;; Font
+
+;;; retro-glyph
+(cl-defstruct (retro-glyph (:constructor retro--glyph-create)
+                           (:copier nil))
+  "Represent a single glyph in a bitmap font."
+  (glyph 0 :type string)
+  (width 0 :type number)
+  (height 0 :type number)
+  (transparent-color 0 :type number)
+  (pixels nil :type vector))
+
+;;; retro-font
+(cl-defstruct (retro-font (:constructor retro--font-create)
+                          (:copier nil))
+  "Represent a bitmap font."
+  (glyphs nil :type ht-p))
+
+;;; Load font from file
+(defun retro--load-font (file-path)
+  "Load FONT from FILE-PATH."
+  (with-temp-buffer
+    (insert-file-contents file-path)
+    (goto-char (point-min))
+    (retro--skip-comments)
+    (let ((font (retro--font-create :glyphs (ht-create)))
+          (current-glyph nil))
+      (while (not (eobp))
+        (setq current-glyph (retro--parse-font-glyph))
+        (ht-set (retro-font-glyphs font) (retro-glyph-glyph current-glyph) current-glyph))
+      font)))
+
+(defun retro--parse-font-glyph ()
+  "Create front glyph by parsing current buffer."
+  (if (not (string-match-p "^\\s-*>>" (buffer-substring-no-properties
+                                       (line-beginning-position)
+                                       (line-end-position))))
+      nil
+    (let* ((header (buffer-substring-no-properties
+                    (line-beginning-position)
+                    (line-end-position)))
+           (tokens (split-string header))
+           (glyph (if (equal (nth 1 tokens) "SPACE") " " (nth 1 tokens)))
+           (width (string-to-number (nth 2 tokens)))
+           (height (string-to-number (nth 3 tokens)))
+           (transparent-color (nth 4 tokens))
+           (pixels (make-vector (* width height) nil))
+           (i 0)
+           current-line)
+      (forward-line 1)
+      (retro--skip-comments)
+      (setq current-line (buffer-substring-no-properties
+                          (line-beginning-position)
+                          (line-end-position)))
+      (while (and (not (eobp)) (not (string-match-p "^\\s-*>>" current-line)))
+        (dolist (color (split-string current-line))
+          (aset pixels i (retro--add-color-to-palette color))
+          (cl-incf i))
+        (forward-line 1)
+        (retro--skip-comments)
+        (setq current-line (buffer-substring-no-properties
+                            (line-beginning-position)
+                            (line-end-position))))
+      (retro--glyph-create :glyph glyph
+                           :width width
+                           :height height
+                           :transparent-color (retro--add-color-to-palette transparent-color)
+                           :pixels pixels))))
+
+;;; Plot char
+(defun retro--plot-char (font char x y canvas)
+  "Plot CHAR from FONT at (X, Y) in CANVAS."
+  (let ((glyph (ht-get (retro-font-glyphs font) char)))
+    (if (not glyph)
+        (error (format "Unable to find glyph for char `%s` in font" char))
+      (let* ((cw (retro-canvas-width canvas))
+             (ch (retro-canvas-height canvas))
+             (px (retro-glyph-pixels glyph))
+             (gw (retro-glyph-width glyph))
+             (gh (retro-glyph-height glyph))
+             ;; coordinates are relative to canvas
+             (cl (cons 0 0))                ; canvas top left corner
+             (cr (cons (1- cw) (1- ch)))    ; canvar right bottom corner
+             (gl (cons x y))                ; glyph top left corner
+             (gr (cons (1- gw) (1- gh)))    ; glyph right bottom corner
+             ;; coordinates of the intersection
+             (sx0 (max (car cl)
+                       (car gl)))
+             (sx1 (min (+ (car cl) (car cr))
+                       (+ (car gl) (car gr))))
+             (sy0 (max (cdr cl)
+                       (cdr gl)))
+             (sy1 (min (+ (cdr cl) (cdr cr))
+                       (+ (cdr gl) (cdr gr)))))
+        (when (and (<= sx0 sx1) (<= sy0 sy1))
+          (retro--vector-clip-blit px
+                                   ;; convert sx0 sy0 sx1 sy1 to sprite relative coordinates
+                                   (- sx0 x)
+                                   (- sy0 y)
+                                   (- sx1 x)
+                                   (- sy1 y)
+                                   gw
+                                   (retro-canvas-pixels canvas)
+                                   sx0
+                                   sy0
+                                   cw
+                                   (retro-glyph-transparent-color glyph)))))))
+
+;;; Plot string
+(defun retro--plot-string (font string x y letter-spacing canvas)
+  "Plot STRING usgin glyphs from FONT at (X, Y) in CANVANS.
+
+Separate chars with LETTER-SPACING amount of pixels"
+  (let ((chars (split-string string "" t))
+        (glyph nil))
+    (dolist (char chars)
+      (setq glyph (ht-get (retro-font-glyphs font) char))
+      (if (not glyph)
+          (error (format "Unable to find glyph for char `%s` in font" char))
+        (retro--plot-char font char x y canvas)
+        (if (equal char " ")
+            (setq x (+ x (retro-glyph-width glyph) (- letter-spacing)))
+          (setq x (+ x (retro-glyph-width glyph) letter-spacing)))))))
+
+;;; Change font color
+(defun retro--change-colors-font (font colors-map)
+  "Create a new font from FROM with glyphs colors mapped with COLORS-MAP.
+
+Colors should be specified as RGB hex string (ex. \"0xffffff\")
+
+- FONT is a font structure (retro-font-p)
+- COLORS-MAP is a list of cons ((FROM-COLOR . TO-COLOR))"
+  (let* ((to-font (retro--font-create :glyphs (ht-create)))
+         (colors (mapcar (lambda (m) (cons (retro--add-color-to-palette (car m))
+                                          (retro--add-color-to-palette (cdr m))))
+                         colors-map))
+         (color-to-color (lambda (from-color)
+                           (cdr (seq-find (lambda (m) (eq (car m) from-color)) colors (cons from-color from-color)))))
+         (glyph nil)
+         (width 0)
+         (height 0)
+         (from-pixels nil)
+         (to-pixels nil))
+    (dolist (char (ht-keys (retro-font-glyphs font)))
+      (setq glyph (ht-get (retro-font-glyphs font) char)
+            from-pixels (retro-glyph-pixels glyph)
+            width (retro-glyph-width glyph)
+            height (retro-glyph-height glyph)
+            to-pixels (make-vector (* width height) 0))
+      (dotimes (i (* width height))
+        (aset to-pixels i (funcall color-to-color (aref from-pixels i))))
+      (ht-set (retro-font-glyphs to-font)
+              char
+              (retro--glyph-create :glyph char
+                                   :width width
+                                   :height height
+                                   :transparent-color (funcall color-to-color (retro-glyph-transparent-color glyph))
+                                   :pixels to-pixels)))
+    to-font))
 
 
 ;;; Sprite

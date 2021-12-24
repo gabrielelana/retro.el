@@ -1,6 +1,6 @@
 #+TITLE: retro.el
 
-* RETRO-001 Dino running game [5/23]
+* RETRO-001 Dino running game [7/23]
 Implement "Dino running game" included in Chrome at ~chrome://dino/~
 
 Reference for constants, code and assets
@@ -18,10 +18,10 @@ Reference for constants, code and assets
 - [ ] ~retro-sprite-bb~ (Bounding Box)
 - [ ] ~retro-sprite-aabb~ (Axis Oriented Bounding Box)
 - [ ] Extract ~tweening~ functions to ~retro-tween.el~ library
-- [ ] Load fonts from file
+- [X] Load fonts from file
       ~(retro--load-font file-path)~
-- [ ] Plot text on screen with characters provided by a font
-      ~(retro--plot-text font "Hello World" X Y)~
+- [X] Plot text on screen with characters provided by a font
+      ~(retro--plot-string font "Hello World" X Y)~
 - [X] Make random clouds appear and remove them when out of canvas
 - [ ] Make random cluster of cactus appear and remove them when out of canvas
 - [ ] Rename as ~dino.el~
