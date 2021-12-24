@@ -20,20 +20,17 @@ Reference for constants, code and assets
       ~(retro--plot-string font "Hello World" X Y)~
 - [X] Print current score on screen
 - [X] Make random clouds appear and remove them when out of canvas
-- [ ] Make random cluster of cactus appear and remove them when out of canvas
 - [ ] Rename as ~dino.el~
+- [ ] Make random cluster of cactus appear and remove them when out of canvas
 - [ ] Add collision between cactus and t-rex
 - [ ] Make random pterodactyl appear and remove them when out of canvas
 - [ ] Add dock animation for t-rex
 - [ ] Add collision between pterodactyl and t-rex
 - [ ] Make the "speed" of the game a variable and calculate everything accordingly
-- [ ] Compute and show score
 - [ ] Keep the highest score somewhere
 - [ ] Game over
 - [ ] Restart game after game over
 - [ ] Start with ~offline~ || ~dino~ autoloaded command
-- [ ] ~retro-sprite-bb~ (Bounding Box)
-- [ ] ~retro-sprite-aabb~ (Axis Oriented Bounding Box)
 - [ ] Extract ~tweening~ functions to ~retro-tween.el~ library
 - [ ] Release as ~dino.el~
 
@@ -51,14 +48,24 @@ Release ~retro.el~ version 0.0.1
 - [ ] Experiment performance impact of using ~defclass~ and ~defmethod~
 - [ ] Explore how to implement state machines in common lisp
 
-* Refile [2/39]
+* Refile [2/41]
 Tasks to be refiled somewhere else in this project
 
-- [X] DEMO: Captain America walking in every direction
 - [ ] Resize pixel-grid
   - [ ] ~(retro--vector-resize width height vector width-scale height-scale) -> (vector . (width . height))~
   - [ ] ~(retro--vector-resize-to-scale width height vector scale) -> (vector . (width . height))~
   - [ ] ~(retro--vector-resize-to-dimension from-width from-height vector to-width to-height) -> vector~
+- [ ] Create viewport on a canvas or another viewport: a canvas is a viewport,
+  when plot something to a viewport if outside of it then plot nothing even if
+  inside the original canvas. This feature will enable us to have different part
+  of the screen dedicated to display different stuff (scoreboard, dashboard,
+  inventory, ...). First use case is the debug viewport to display the name of
+  the game, the frame number, current frame per seconds, ...
+- [ ] ~retro-sprite-bb~ (Bounding Box)
+- [ ] ~retro-sprite-aabb~ (Axis Oriented Bounding Box)
+- [X] DEMO: Captain America walking in every direction
+- [ ] DEMO: Captain America, walking animation done in update, not in key handlers, for smoother animation, how?
+- [ ] DEMO: Captain America, add path (grass/water) in a map bigger than canvas, maybe a labyrinth, follow the sprite
 - [ ] Rename things based on the definition of main concepts
   - Buffer (Emacs)
   - Canvas
@@ -71,12 +78,6 @@ Tasks to be refiled somewhere else in this project
     - Frame
   - Font
     - Glyph
-- [ ] Create viewport on a canvas or another viewport: a canvas is a viewport,
-  when plot something to a viewport if outside of it then plot nothing even if
-  inside the original canvas. This feature will enable us to have different part
-  of the screen dedicated to display different stuff (scoreboard, dashboard,
-  inventory, ...). First use case is the debug viewport to display the name of
-  the game, the frame number, current frame per seconds, ...
 - [ ] DEMO: Pink walk, jump, throw
 - [ ] GAME: Pong
 - [ ] disable buffer selection in ~*retro*~ buffers

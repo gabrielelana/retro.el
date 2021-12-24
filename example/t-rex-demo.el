@@ -101,7 +101,7 @@
 ;;; Constants
 (defconst *t-rex-width* 600)
 (defconst *t-rex-height* 150)
-(defconst *t-rex-cloud-y* '(30 . 41))
+(defconst *t-rex-cloud-y* '(10 . 100))
 (defconst *t-rex-cloud-gap* '(100 . 300))
 (defconst *t-rex-cloud-velocity* 100.0)  ; pixels per second
 (defconst *t-rex-cloud-max* 6)
@@ -114,6 +114,12 @@
 
 ;;; ============================================================================
 ;;; T-Rex
+
+;;; TODO: t-rex structure containing only sprite and status ("running"/"jumping"/"docking")
+;;; TODO: use global variables *t-rex-t-rex-...*
+;;; TODO: t-rex-jump
+;;; TODO: t-rex-update
+;;; TODO: t-rex-render
 
 (cl-defstruct (t-rex-sprite (:constructor t-rex-sprite--create)
                             (:copier nil))
@@ -157,7 +163,7 @@
   (dolist (cloud clouds)
     (retro--plot-tile cloud canvas)))
 
-(defun t-rex-demo-update-clouds (clouds height elapsed)
+(defun t-rex-demo-update-clouds (clouds elapsed)
   "Update clouds."
   (setf clouds (seq-filter (lambda (cloud) (> (+ (retro-tile-x cloud) (retro-tile-width cloud)) 0)) clouds))
   (dolist (cloud clouds)
@@ -167,7 +173,7 @@
     (let ((last-cloud (car clouds))
           (y (+ (car *t-rex-cloud-y*) (random (cdr *t-rex-cloud-y*))))
           (gap (+ (car *t-rex-cloud-gap*) (random (cdr *t-rex-cloud-gap*)))))
-      (cons (retro--load-tile "./asset/t-rex-cloud.sprite" (+ gap (retro-tile-x last-cloud)) (- height y)) clouds))))
+      (cons (retro--load-tile "./asset/t-rex-cloud.sprite" (+ gap (retro-tile-x last-cloud)) y) clouds))))
 
 ;;; ============================================================================
 ;;; ============================================================================
@@ -189,7 +195,7 @@
   ;; (message "[%03d] elapsed: %fs" (nth 0 game-state) elapsed)
   (retro--scroll-background (nth 1 game-state) (round (* 200.0 elapsed)))
   (funcall (t-rex-sprite-update (nth 2 game-state)) elapsed canvas)
-  (setf (nth 3 game-state) (t-rex-demo-update-clouds (nth 3 game-state) (retro-canvas-height canvas) elapsed))
+  (setf (nth 3 game-state) (t-rex-demo-update-clouds (nth 3 game-state) elapsed))
   (cl-incf (car game-state)))
 
 (defun t-rex-demo-render (game-state canvas)
