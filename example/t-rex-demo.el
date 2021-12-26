@@ -1,101 +1,7 @@
 ;; -*- lexical-binding: t -*-
 
 (require 'retro (expand-file-name "./../retro.el"))
-
-;;; TODO: defconst retro-pi retro-pi/2
-(defvar m/pi 3.1415926535897932)
-(defvar m/pi/2 1.5707963267948966)
-
-;;; ease
-(defun linear (x)
-  "..."
-  x)
-
-(defun smoothstep (x)
-  "..."
-  (* x x (- 3 (* 2 x))))
-
-(defun ease-in-quad (x)
-  (* x x))
-
-(defun ease-out-quad (x)
-  (* x (- 2.0 x)))
-
-(defun ease-in-cubic (x)
-  (* x x x))
-
-(defun ease-out-cubic (x)
-  (let ((x* (- x 1.0)))
-    (+ 1.0 (* x* x* x*))))
-
-(defun ease-in-out-quad (x)
-  (if (< x 0.5)
-      (* 2.0 x x)
-    (- (* (- 4 (* 2.0 x)) x) 1.0)))
-
-(defun ease-in-sine (x)
-  (+ (* (- x) (cos (* x m/pi/2))) x))
-
-;;; interpolate
-(defun lerp (start end alpha)
-  (round (+ (* start (- 1.0 alpha))
-            (* end alpha))))
-
-;;; animate
-(defun tween (duration start end &optional ease interpolation)
-  "..."
-  (let ((elapsed 0))
-    (lambda (dt)
-      (setq elapsed (+ elapsed dt))
-      (if (> elapsed duration)
-          ;; TODO: make continuation optional
-          (list nil (- elapsed duration) (tween duration start end ease interpolation))
-        (funcall (or interpolation 'lerp)
-                 start
-                 end
-                 (funcall (or ease 'smoothstep)
-                          (/ elapsed duration)))))))
-
-(defun tween-loop (tw)
-  "..."
-  (let ((v nil))
-    (lambda (dt)
-      (setq v (funcall tw dt))
-      (when (listp v)
-        (setq tw (nth 2 v)
-              v (funcall tw (nth 1 v))))
-      v)))
-
-(defun tween-concat (twl twr)
-  (let ((v nil)
-        (ntwl nil)
-        (ntwr nil)
-        (tw twl))
-    (lambda (dt)
-      (setq v (funcall tw dt))
-      (when (listp v)
-        (if (eq tw twl)
-            (setq ntwl (nth 2 v)
-                  tw twr
-                  v (funcall tw (nth 1 v)))
-          (setq ntwr (nth 2 v)
-                tw nil
-                v (list nil (nth 1 v) (tween-concat ntwl ntwr)))))
-      v)))
-
-(defun tween-distinct-until-changed (tw &optional test)
-  (let ((pv nil)
-        (cv nil))
-    (lambda (dt)
-      (setq cv (funcall tw dt))
-      (if (listp cv)
-          cv
-        (if (funcall (or test 'eq) cv pv)
-            nil
-          (setq pv cv)
-          cv)))))
-
-;;; TODO: tween-cons
+(require 'retro-tween (expand-file-name "./../retro-tween.el"))
 
 ;;; ============================================================================
 ;;; Constants
@@ -203,7 +109,7 @@
         ))
 
 (defun t-rex-demo-update (elapsed game-state _canvas)
-  (message "[%03d] elapsed: %fs" (nth 0 game-state) elapsed)
+  (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed)
   (retro--scroll-background (nth 1 game-state) (round (* *t-rex-ground-velocity* elapsed)))
   (t-rex-update (nth 2 game-state) elapsed)
   (setf (nth 3 game-state) (t-rex-demo-update-clouds (nth 3 game-state) elapsed))

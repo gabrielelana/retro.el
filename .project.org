@@ -1,6 +1,6 @@
 #+TITLE: retro.el
 
-* RETRO-001 Dino running game [8/24]
+* RETRO-001 Dino running game [10/23]
 Implement "Dino running game" included in Chrome at ~chrome://dino/~
 
 Reference for constants, code and assets
@@ -20,18 +20,20 @@ Reference for constants, code and assets
       ~(retro--plot-string font "Hello World" X Y)~
 - [X] Print current score on screen
 - [X] Make random clouds appear and remove them when out of canvas
+- [X] Make cactus appear and remove them when out of canvas
 - [ ] Rename as ~dino.el~
-- [ ] Make random cluster of cactus appear and remove them when out of canvas
+- [ ] Load a limited number of clouds to preserve memory
+- [ ] Load a limited number of cactus to preserve memory
 - [ ] Add collision between cactus and t-rex
-- [ ] Make random pterodactyl appear and remove them when out of canvas
+- [ ] Game over
 - [ ] Add dock animation for t-rex
+- [ ] Add pterodactyls
 - [ ] Add collision between pterodactyl and t-rex
 - [ ] Make the "speed" of the game a variable and calculate everything accordingly
 - [ ] Keep the highest score somewhere
-- [ ] Game over
 - [ ] Restart game after game over
 - [ ] Start with ~offline~ || ~dino~ autoloaded command
-- [ ] Extract ~tweening~ functions to ~retro-tween.el~ library
+- [X] Extract ~tweening~ functions to ~retro-tween.el~ library
 - [ ] Release as ~dino.el~
 
 * RETRO-002 Release 0.0.1 [0/6]
@@ -51,10 +53,16 @@ Release ~retro.el~ version 0.0.1
 * Refile [2/41]
 Tasks to be refiled somewhere else in this project
 
+- [ ] Pixel grid is a Canvas??? Use Canvas name, Use Screen for what previously called Canvas
+- [ ] Try 320x240 with full background (Captain America + tiles)
+- [ ] Starting Canvas from Buffer position ~(0, 0)~ will improve performance?
+- [ ] Simulate key-down/key-up with global timer VS key-press
 - [ ] Resize pixel-grid
   - [ ] ~(retro--vector-resize width height vector width-scale height-scale) -> (vector . (width . height))~
   - [ ] ~(retro--vector-resize-to-scale width height vector scale) -> (vector . (width . height))~
   - [ ] ~(retro--vector-resize-to-dimension from-width from-height vector to-width to-height) -> vector~
+- [ ] Rotate pixel-grid
+- [ ] Compose pixel-grids -> pixel-grid
 - [ ] Create viewport on a canvas or another viewport: a canvas is a viewport,
   when plot something to a viewport if outside of it then plot nothing even if
   inside the original canvas. This feature will enable us to have different part
@@ -78,6 +86,8 @@ Tasks to be refiled somewhere else in this project
     - Frame
   - Font
     - Glyph
+  - Face
+    - Color
 - [ ] DEMO: Pink walk, jump, throw
 - [ ] GAME: Pong
 - [ ] disable buffer selection in ~*retro*~ buffers
@@ -104,7 +114,6 @@ Tasks to be refiled somewhere else in this project
 - [ ] blog posts on the optimization journey for ~retro.el~
 - [ ] ~(retro--sprite-flip-v sprite)~
 - [ ] ~(retro--tile-flip-v)~
-- [ ] flip-v
 - [X] garbage collection trick?
 - [ ] extract example and ask for possible improvements on emacs-devel ml
 - [ ] add hook on window resize -> font dimension resize
@@ -127,3 +136,28 @@ Tasks to be refiled somewhere else in this project
 Tasks unrelated to this project
 
 - [ ] Something to do
+
+* Scratchpad
+
+Example of what an ECS can be like
+#+BEGIN_SRC elisp
+(component 'cloud
+           {documentation})
+
+(component 'position
+           {documentation}
+           :x {default} {type} {documentation}
+           :y {default} {type} {documentation})
+
+(entity nil
+        (with-component 'cloud)
+        (with-component 'position :x 0 :y 0))
+
+(system spawn-clouds
+        :has-cloud _
+        :has-position x y
+        (when (< x 0)
+          (let ((clouds-to-spawn (- (+ (random 3) 3) (visible-clouds)))
+                (last-cloud (last-visible-cloud)))
+            (dolist (_ clouds-to-spawn) (setq last-cloud (spawn-cloud last-cloud))))))
+#+END_SRC
