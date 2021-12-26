@@ -105,55 +105,45 @@
 (defconst *t-rex-cloud-gap* '(100 . 300))
 (defconst *t-rex-cloud-velocity* 100.0)  ; pixels per second
 (defconst *t-rex-cloud-max* 6)
-(defconst *t-rex-t-rex-x* 10)
-(defconst *t-rex-t-rex-ground-y* 101)
-(defconst *t-rex-t-rex-top-y* 40)
 (defconst *t-rex-score-x* 430)
 (defconst *t-rex-score-y* 20)
 (defconst *t-rex-score-text* "HI %05d %05d")
+(defconst *t-rex-t-rex-x* 10)
+(defconst *t-rex-t-rex-ground-y* 101)
+(defconst *t-rex-t-rex-top-y* 40)
 
 ;;; ============================================================================
 ;;; T-Rex
 
-;;; TODO: t-rex structure containing only sprite and status ("running"/"jumping"/"docking")
-;;; TODO: use global variables *t-rex-t-rex-...*
-;;; TODO: t-rex-jump
-;;; TODO: t-rex-update
-;;; TODO: t-rex-render
+(defvar t-rex-running-tween (tween-distinct-until-changed (tween-loop (tween 0.3 0 1 'linear))))
+(defvar t-rex-current-tween t-rex-running-tween)
+(defvar t-rex-current-play "running")
 
-(cl-defstruct (t-rex-sprite (:constructor t-rex-sprite--create)
-                            (:copier nil))
-  "T-Rex."
-  (jump nil :type function)
-  (update nil :type function)
-  (render nil :type function))
+(defun t-rex-jump (sprite)
+  (when (not (equal "jumping" t-rex-current-play))
+    (setq t-rex-current-play "jumping"
+          t-rex-current-tween (tween-concat (tween 0.3 *t-rex-t-rex-ground-y* *t-rex-t-rex-top-y* 'ease-out-cubic)
+                                            (tween 0.3 *t-rex-t-rex-top-y* *t-rex-t-rex-ground-y* 'ease-in-cubic)))
+    (retro--play-sprite sprite "jumping")))
 
-(cl-defun t-rex-sprite-create (&key x y ground-y top-y)
-  "Create T-Rex."
-  (let ((sprite (retro--load-sprite "./asset/t-rex.sprite" x y))
-        (jumping nil)
-        (running-tween (tween-distinct-until-changed (tween-loop (tween 0.3 0 1 'linear))))
-        (jumping-tween nil)
-        y)
-    (retro--play-sprite sprite "running")
-    (t-rex-sprite--create :jump (lambda ()
-                                  (setq jumping t
-                                        jumping-tween (tween-concat (tween 0.3 ground-y top-y 'ease-out-cubic)
-                                                                    (tween 0.3 top-y ground-y 'ease-in-cubic)))
-                                  (retro--play-sprite sprite "jumping"))
-                          :update (lambda (elapsed _canvas)
-                                    (when jumping
-                                      (setq y (funcall jumping-tween elapsed))
-                                      (if (numberp y)
-                                          (setf (retro-sprite-y sprite) y)
-                                        (setq jumping nil
-                                              jumping-tween nil)
-                                        (setf (retro-sprite-y sprite) ground-y)
-                                        (retro--play-sprite sprite "running")))
-                                    (when (funcall running-tween elapsed)
-                                      (retro--next-frame-sprite sprite)))
-                          :render (lambda (canvas)
-                                    (retro--plot-sprite sprite canvas)))))
+(defun t-rex-update (sprite elapsed)
+  (let (y)
+    (cond
+     ((equal "jumping" t-rex-current-play)
+      (setq y (funcall t-rex-current-tween elapsed))
+      (if (numberp y)
+          (setf (retro-sprite-y sprite) y)
+        (setf (retro-sprite-y sprite) *t-rex-t-rex-ground-y*)
+        (setq t-rex-current-play "running"
+              t-rex-current-tween t-rex-running-tween)
+        (retro--play-sprite sprite "running")))
+     ((equal "running" t-rex-current-play)
+      (when (funcall t-rex-current-tween elapsed)
+        (retro--next-frame-sprite sprite)))
+     (t (error "unreachable")))))
+
+(defun t-rex-render (sprite canvas)
+  (retro--plot-sprite sprite canvas))
 
 ;;; ============================================================================
 ;;; Clouds
@@ -176,26 +166,48 @@
       (cons (retro--load-tile "./asset/t-rex-cloud.sprite" (+ gap (retro-tile-x last-cloud)) y) clouds))))
 
 ;;; ============================================================================
+;;; Cactus
+
+(defconst *t-rex-ground-velocity* 250)
+(defconst *t-rex-cactus-max* 3)
+(defconst *t-rex-cactus-gap* '(180 . 320))
+(defconst *t-rex-cactus-y* 100)
+
+(defun t-rex-demo-render-cactuses (cactuses canvas)
+  "Render cactuses."
+  (dolist (cactus cactuses)
+    (retro--plot-tile cactus canvas)))
+
+(defun t-rex-demo-update-cactuses (cactuses elapsed)
+  "Update cactuses."
+  (setf cactuses (seq-filter (lambda (cactus) (> (+ (retro-tile-x cactus) (retro-tile-width cactus)) 0)) cactuses))
+  (dolist (cactus cactuses)
+    (setf (retro-tile-x cactus) (- (retro-tile-x cactus) (round (* *t-rex-ground-velocity* elapsed)))))
+  (if (>= (seq-length cactuses) *t-rex-cactus-max*)
+      cactuses
+    (let ((last-cactus (car cactuses))
+          (gap (+ (car *t-rex-cactus-gap*) (random (cdr *t-rex-cactus-gap*)))))
+      (cons (retro--load-tile "./asset/t-rex-cactus-single-big.sprite" (+ gap (retro-tile-x last-cactus)) *t-rex-cactus-y*) cactuses))))
+
+;;; ============================================================================
 ;;; ============================================================================
 ;;; ============================================================================
 
 (defun t-rex-demo-init ()
   (list 0
         (retro--load-background "./asset/t-rex-horizon.sprite" *t-rex-width* 0 0 (- *t-rex-height* 12 1))
-        (t-rex-sprite-create :x *t-rex-t-rex-x*
-                             :y *t-rex-t-rex-ground-y*
-                             :ground-y *t-rex-t-rex-ground-y*
-                             :top-y *t-rex-t-rex-top-y*)
+        (retro--load-sprite "./asset/t-rex.sprite" *t-rex-t-rex-x* *t-rex-t-rex-ground-y*)
         (list (retro--load-tile "./asset/t-rex-cloud.sprite" (- *t-rex-width* 50) 24))
         (retro--load-font "./asset/dino.font")
-        ;; (list (retro--load-tile "./asset/cactus-single-big.sprite" (- *t-rex-width* 50) 24))
+        (list (retro--load-tile "./asset/t-rex-cactus-single-big.sprite" (- *t-rex-width* 50) *t-rex-cactus-y*))
         ))
 
-(defun t-rex-demo-update (elapsed game-state canvas)
-  ;; (message "[%03d] elapsed: %fs" (nth 0 game-state) elapsed)
-  (retro--scroll-background (nth 1 game-state) (round (* 200.0 elapsed)))
-  (funcall (t-rex-sprite-update (nth 2 game-state)) elapsed canvas)
+(defun t-rex-demo-update (elapsed game-state _canvas)
+  (message "[%03d] elapsed: %fs" (nth 0 game-state) elapsed)
+  (retro--scroll-background (nth 1 game-state) (round (* *t-rex-ground-velocity* elapsed)))
+  (t-rex-update (nth 2 game-state) elapsed)
   (setf (nth 3 game-state) (t-rex-demo-update-clouds (nth 3 game-state) elapsed))
+  (setf (nth 5 game-state) (t-rex-demo-update-cactuses (nth 5 game-state) elapsed))
   (cl-incf (car game-state)))
 
 (defun t-rex-demo-render (game-state canvas)
@@ -207,7 +219,8 @@
                       2
                       canvas)
   (t-rex-demo-render-clouds (nth 3 game-state) canvas)
-  (funcall (t-rex-sprite-render (nth 2 game-state)) canvas))
+  (t-rex-demo-render-cactuses (nth 5 game-state) canvas)
+  (t-rex-render (nth 2 game-state) canvas))
 
 (defun t-rex-demo ()
   "Show a T-Rex running."
@@ -216,7 +229,7 @@
                      :background-color (ht-get retro-palette-colors->index "#ffffff")
                      :bind `(("q" . retro--handle-quit)
                              ("SPC" . (lambda (game-state _)
-                                        (funcall (t-rex-sprite-jump (nth 2 game-state))))))
+                                        (t-rex-jump (nth 2 game-state)))))
                      :init 't-rex-demo-init
                      :update 't-rex-demo-update
                      :render 't-rex-demo-render))
