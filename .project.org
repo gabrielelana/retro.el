@@ -1,6 +1,6 @@
 #+TITLE: retro.el
 
-* RETRO-001 Dino running game [10/23]
+* RETRO-001 Dino running game [11/23]
 Implement "Dino running game" included in Chrome at ~chrome://dino/~
 
 Reference for constants, code and assets
@@ -21,11 +21,11 @@ Reference for constants, code and assets
 - [X] Print current score on screen
 - [X] Make random clouds appear and remove them when out of canvas
 - [X] Make cactus appear and remove them when out of canvas
-- [ ] Rename as ~dino.el~
-- [ ] Load a limited number of clouds to preserve memory
-- [ ] Load a limited number of cactus to preserve memory
+- [X] Rename as ~dino.el~
 - [ ] Add collision between cactus and t-rex
 - [ ] Game over
+- [ ] Load a limited number of clouds to preserve memory
+- [ ] Load a limited number of cactus to preserve memory
 - [ ] Add dock animation for t-rex
 - [ ] Add pterodactyls
 - [ ] Add collision between pterodactyl and t-rex
