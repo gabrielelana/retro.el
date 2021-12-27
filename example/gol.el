@@ -202,7 +202,7 @@ cell, as if by reproduction.
                                          (when (gol-pause-p game-state)
                                            (cl-incf (gol-generation game-state))
                                            (setf (gol-universe game-state) (universe-evolve (gol-universe game-state))))))
-                                ("<down-mouse-1>" . (lambda (game-state _ click-jkgxy)
+                                ("<down-mouse-1>" . (lambda (game-state _ click-xy)
                                                       (when (gol-pause-p game-state)
                                                         (let ((cell-x (car click-xy))
                                                               (cell-y (- ,height (cdr click-xy) 1)))
