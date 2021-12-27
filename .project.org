@@ -1,6 +1,6 @@
 #+TITLE: retro.el
 
-* RETRO-001 Dino running game [11/23]
+* RETRO-001 Dino running game [16/26]
 Implement "Dino running game" included in Chrome at ~chrome://dino/~
 
 Reference for constants, code and assets
@@ -21,19 +21,22 @@ Reference for constants, code and assets
 - [X] Print current score on screen
 - [X] Make random clouds appear and remove them when out of canvas
 - [X] Make cactus appear and remove them when out of canvas
+- [X] Extract ~tweening~ functions to ~retro-tween.el~ library
 - [X] Rename as ~dino.el~
-- [ ] Add collision between cactus and t-rex
-- [ ] Game over
-- [ ] Load a limited number of clouds to preserve memory
-- [ ] Load a limited number of cactus to preserve memory
+- [X] Add collision between cactus and t-rex
+- [X] Game over
+- [X] Load a limited number of clouds to preserve memory
+- [X] Load a limited number of cactus to preserve memory
+- [X] More forgiving bounding boxes for cactus
+- [ ] T-Rex hit animation
+- [ ] Restart game by hitting space when game-over
+- [ ] Display something when game-over?
 - [ ] Add dock animation for t-rex
 - [ ] Add pterodactyls
 - [ ] Add collision between pterodactyl and t-rex
 - [ ] Make the "speed" of the game a variable and calculate everything accordingly
 - [ ] Keep the highest score somewhere
-- [ ] Restart game after game over
 - [ ] Start with ~offline~ || ~dino~ autoloaded command
-- [X] Extract ~tweening~ functions to ~retro-tween.el~ library
 - [ ] Release as ~dino.el~
 
 * RETRO-002 Release 0.0.1 [0/6]
@@ -53,9 +56,9 @@ Release ~retro.el~ version 0.0.1
 * Refile [2/41]
 Tasks to be refiled somewhere else in this project
 
+- [ ] Starting Canvas from Buffer position ~(0, 0)~ will improve performance?
 - [ ] Pixel grid is a Canvas??? Use Canvas name, Use Screen for what previously called Canvas
 - [ ] Try 320x240 with full background (Captain America + tiles)
-- [ ] Starting Canvas from Buffer position ~(0, 0)~ will improve performance?
 - [ ] Simulate key-down/key-up with global timer VS key-press
 - [ ] Resize pixel-grid
   - [ ] ~(retro--vector-resize width height vector width-scale height-scale) -> (vector . (width . height))~
@@ -125,6 +128,7 @@ Tasks to be refiled somewhere else in this project
   better for animated graphics because images in this case is not an option.
 - [ ] [[https://www.reddit.com/r/gamedev/comments/qsxmb/the_best_jump_algorithm_for_2d_scrolling_games][jump code]] and [[https://gamedev.stackexchange.com/questions/60008/smooth-jumping-in-2d-platformers][here]]
 - [ ] GAME: snake ([[https://opengameart.org/content/snake-game-assets][assets]])
+- [ ] GAME: galaga ([[http://www.freegalaga.com/][game play]] [[https://www.spriters-resource.com/arcade/galaga/sheet/26482/][assets]])
 - [ ] GAME: flappy bird
 - [ ] GAME: pico-8 emulator || similar platform
 - [ ] GAME: space invaders original ROM
@@ -141,6 +145,9 @@ Tasks unrelated to this project
 
 Example of what an ECS can be like
 #+BEGIN_SRC elisp
+(t-rex/sprite.x) -> (sprite-x t-rex)
+(t-rex/sprite.y) -> (sprite-y t-rex)
+
 (component 'cloud
            {documentation})
 
