@@ -134,7 +134,31 @@
     (list coordinates tile)))
 
 ;;; ============================================================================
-;;; ============================================================================
+;;; Collision detection
+
+(defmacro bb-left (bb) `(caar ,bb))
+(defmacro bb-right (bb) `(cadr ,bb))
+(defmacro bb-top (bb) `(cdar ,bb))
+(defmacro bb-bottom (bb) `(cddr ,bb))
+
+(defmacro bb-sprite (sprite) `(cons (cons (retro-sprite-x ,sprite)
+                                          (retro-sprite-y ,sprite))
+                                    (cons (+ (retro-sprite-x ,sprite) (retro-sprite-width ,sprite))
+                                          (+ (retro-sprite-y ,sprite) (retro-sprite-height ,sprite)))))
+
+(defun bb-intersect? (bbl bbr)
+  "Check intersection between bounding boxes."
+  (and (< (bb-left bbl) (bb-right bbr))
+       (> (bb-right bbl) (bb-left bbr))
+       (< (bb-top bbl) (bb-bottom bbr))
+       (> (bb-bottom bbl) (bb-top bbr))))
+
+(defun collision? (t-rex-bb tiles-bb)
+  "Detect collision between T-Rex and some tiles"
+  (->> tiles-bb
+       (seq-filter (lambda (tile-bb) (<= (bb-left tile-bb) (bb-left t-rex-bb))))
+       (seq-some (lambda (tile-bb) (bb-intersect? t-rex-bb tile-bb)))))
+
 ;;; ============================================================================
 
 (defun dino-init ()
@@ -144,15 +168,28 @@
         (list (initial-tiles *CLOUD-MAX* *CLOUD-Y* *CLOUD-GAP*) (retro--load-tile "./asset/dino-cloud.sprite" 0 0))
         (retro--load-font "./asset/dino.font")
         (list (initial-tiles *CACTUS-MAX* *CACTUS-Y* *CACTUS-GAP*) (retro--load-tile "./asset/dino-cactus-single-big.sprite" 0 0))
+        :playing
         ))
 
 (defun dino-update (elapsed game-state _canvas)
-  (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed)
-  (retro--scroll-background (nth 1 game-state) (round (* *GROUND-VELOCITY* elapsed)))
-  (t-rex-update (nth 2 game-state) elapsed)
-  (setf (nth 3 game-state) (update-clouds (nth 3 game-state) elapsed))
-  (setf (nth 5 game-state) (update-cactuses (nth 5 game-state) elapsed))
-  (cl-incf (car game-state)))
+  (if (eq (nth 6 game-state) :game-over)
+      nil
+    ;; (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed)
+    (retro--scroll-background (nth 1 game-state) (round (* *GROUND-VELOCITY* elapsed)))
+    (t-rex-update (nth 2 game-state) elapsed)
+    (setf (nth 3 game-state) (update-clouds (nth 3 game-state) elapsed))
+    (setf (nth 5 game-state) (update-cactuses (nth 5 game-state) elapsed))
+    (let ((cactus-width (retro-tile-width (nth 1 (nth 5 game-state))))
+          (cactus-height (retro-tile-height (nth 1 (nth 5 game-state)))))
+      (when (collision? (bb-sprite (nth 2 game-state))
+                        (mapcar (lambda (coords)
+                                  (cons coords
+                                        (cons (+ (car coords) cactus-width)
+                                              (+ (cdr coords) cactus-height))))
+                                (nth 0 (nth 5 game-state))))
+        (setf (nth 6 game-state) :game-over)
+        (message "GAME OVER")))
+    (cl-incf (car game-state))))
 
 (defun dino-render (_elapsed game-state canvas)
   (retro--plot-background (nth 1 game-state) canvas)
