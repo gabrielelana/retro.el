@@ -2,4 +2,6 @@
 
 Library to create retro games in Emacs
 
-## Warning! Not yet ready to do anything
+## Warning! Not yet ready, only a little preview (~30fps)
+
+![](./example/asset/dino.gif)
