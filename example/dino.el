@@ -50,6 +50,35 @@
   (retro--plot-sprite sprite canvas))
 
 ;;; ============================================================================
+;;; Tiles
+
+(defun initial-tiles (tiles-count tile-y tile-gap)
+  "Generate the initial tiles."
+  (let ((tiles (first-tile tile-y)))
+    (dotimes (_ (1- tiles-count))
+      (setq tiles (append-tile tiles tiles-count tile-y tile-gap)))
+    tiles))
+
+(defun first-tile (tile-y)
+  "Generate the first tile."
+  (list (cons (+ *WIDTH* 50)
+              (+ (car tile-y) (random (cdr tile-y))))))
+
+(defun append-tile (tiles tiles-count tile-y tile-gap)
+  "Append one tile to list of tiles if there are less tiles than wanted."
+  (if (>= (length tiles) tiles-count)
+      tiles
+    (let ((last-tile (car (last tiles)))
+          x y)
+      (setq x (+ (car last-tile) (car tile-gap) (random (cdr tile-gap)))
+            y (+ (car tile-y) (random (cdr tile-y))))
+      (reverse (cons (cons x y) (reverse tiles))))))
+
+(defun remove-passed-tiles (tiles tile-width)
+  "Remove tiles that are no more visible."
+  (seq-filter (lambda (tile) (> (+ (car tile) tile-width) 0)) tiles))
+
+;;; ============================================================================
 ;;; Clouds
 
 (defconst *CLOUD-Y* '(10 . 100))
@@ -59,43 +88,50 @@
 
 (defun render-clouds (clouds canvas)
   "Render clouds."
-  (dolist (cloud clouds)
-    (retro--plot-tile cloud canvas)))
+  (dolist (cloud-coordinates (nth 0 clouds))
+    (setf (retro-tile-x (nth 1 clouds)) (car cloud-coordinates)
+          (retro-tile-y (nth 1 clouds)) (cdr cloud-coordinates))
+    (retro--plot-tile (nth 1 clouds) canvas)))
 
 (defun update-clouds (clouds elapsed)
   "Update clouds."
-  (setf clouds (seq-filter (lambda (cloud) (> (+ (retro-tile-x cloud) (retro-tile-width cloud)) 0)) clouds))
-  (dolist (cloud clouds)
-    (setf (retro-tile-x cloud) (- (retro-tile-x cloud) (round (* *CLOUD-VELOCITY* elapsed)))))
-  (if (>= (seq-length clouds) *CLOUD-MAX*)
-      clouds
-    (let ((last-cloud (car clouds))
-          (y (+ (car *CLOUD-Y*) (random (cdr *CLOUD-Y*))))
-          (gap (+ (car *CLOUD-GAP*) (random (cdr *CLOUD-GAP*)))))
-      (cons (retro--load-tile "./asset/dino-cloud.sprite" (+ gap (retro-tile-x last-cloud)) y) clouds))))
+  (let ((coordinates (nth 0 clouds))
+        (tile (nth 1 clouds)))
+    (setq coordinates (remove-passed-tiles coordinates (retro-tile-width tile)))
+    (while (< (length coordinates) *CLOUD-MAX*)
+      (setq coordinates (append-tile coordinates *CLOUD-MAX* *CLOUD-Y* *CLOUD-GAP*)))
+    (setq coordinates
+          (mapcar (lambda (xy)
+                    (cons (- (car xy) (round (* *CLOUD-VELOCITY* elapsed))) (cdr xy)))
+                  coordinates))
+    (list coordinates tile)))
 
 ;;; ============================================================================
 ;;; Cactus
 
 (defconst *CACTUS-MAX* 3)
 (defconst *CACTUS-GAP* '(180 . 320))
-(defconst *CACTUS-Y* 100)
+(defconst *CACTUS-Y* '(100 . 1))
 
 (defun render-cactuses (cactuses canvas)
   "Render cactuses."
-  (dolist (cactus cactuses)
-    (retro--plot-tile cactus canvas)))
+  (dolist (cactus-coordinates (nth 0 cactuses))
+    (setf (retro-tile-x (nth 1 cactuses)) (car cactus-coordinates)
+          (retro-tile-y (nth 1 cactuses)) (cdr cactus-coordinates))
+    (retro--plot-tile (nth 1 cactuses) canvas)))
 
 (defun update-cactuses (cactuses elapsed)
   "Update cactuses."
-  (setf cactuses (seq-filter (lambda (cactus) (> (+ (retro-tile-x cactus) (retro-tile-width cactus)) 0)) cactuses))
-  (dolist (cactus cactuses)
-    (setf (retro-tile-x cactus) (- (retro-tile-x cactus) (round (* *GROUND-VELOCITY* elapsed)))))
-  (if (>= (seq-length cactuses) *CACTUS-MAX*)
-      cactuses
-    (let ((last-cactus (car cactuses))
-          (gap (+ (car *CACTUS-GAP*) (random (cdr *CACTUS-GAP*)))))
-      (cons (retro--load-tile "./asset/dino-cactus-single-big.sprite" (+ gap (retro-tile-x last-cactus)) *CACTUS-Y*) cactuses))))
+  (let ((coordinates (nth 0 cactuses))
+        (tile (nth 1 cactuses)))
+    (setq coordinates (remove-passed-tiles coordinates (retro-tile-width tile)))
+    (while (< (length coordinates) *CACTUS-MAX*)
+      (setq coordinates (append-tile coordinates *CACTUS-MAX* *CACTUS-Y* *CACTUS-GAP*)))
+    (setq coordinates
+          (mapcar (lambda (xy)
+                    (cons (- (car xy) (round (* *GROUND-VELOCITY* elapsed))) (cdr xy)))
+                  coordinates))
+    (list coordinates tile)))
 
 ;;; ============================================================================
 ;;; ============================================================================
@@ -105,13 +141,13 @@
   (list 0
         (retro--load-background "./asset/dino-horizon.sprite" *WIDTH* 0 0 (- *HEIGHT* 12 1))
         (retro--load-sprite "./asset/dino-t-rex.sprite" *T-REX-X* *T-REX-GROUND-Y*)
-        (list (retro--load-tile "./asset/dino-cloud.sprite" (- *WIDTH* 50) 24))
+        (list (initial-tiles *CLOUD-MAX* *CLOUD-Y* *CLOUD-GAP*) (retro--load-tile "./asset/dino-cloud.sprite" 0 0))
         (retro--load-font "./asset/dino.font")
-        (list (retro--load-tile "./asset/dino-cactus-single-big.sprite" (- *WIDTH* 50) *CACTUS-Y*))
+        (list (initial-tiles *CACTUS-MAX* *CACTUS-Y* *CACTUS-GAP*) (retro--load-tile "./asset/dino-cactus-single-big.sprite" 0 0))
         ))
 
 (defun dino-update (elapsed game-state _canvas)
-  ;; (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed)
+  (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed)
   (retro--scroll-background (nth 1 game-state) (round (* *GROUND-VELOCITY* elapsed)))
   (t-rex-update (nth 2 game-state) elapsed)
   (setf (nth 3 game-state) (update-clouds (nth 3 game-state) elapsed))
