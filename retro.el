@@ -840,8 +840,7 @@ Colors should be specified as RGB hex string (ex. \"0xffffff\")
                                    :previous-canvas previous-canvas)))
     (suppress-keymap keymap)
     (dolist (key (mapcar 'car bind))
-      ;; TODO: replace string-search with something supported by previous versiones of emacs
-      (if (string-search "mouse" (symbol-name key))
+      (if (string-match-p "mouse" (symbol-name key))
           (define-key keymap (kbd (symbol-name key)) (retro--handle-mouseclick key game))
         (define-key keymap (kbd (symbol-name key)) (retro--handle-keypress key game))))
     (with-current-buffer buffer-name
