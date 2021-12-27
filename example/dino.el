@@ -183,8 +183,9 @@
           (cactus-height (retro-tile-height (nth 1 (nth 5 game-state)))))
       (when (collision? (bb-sprite (nth 2 game-state))
                         (mapcar (lambda (coords)
-                                  (cons coords
-                                        (cons (+ (car coords) cactus-width)
+                                  (cons (cons (+ (car coords) (* cactus-width 0.25))
+                                              (cdr coords))
+                                        (cons (+ (car coords) (* cactus-width 0.75))
                                               (+ (cdr coords) cactus-height))))
                                 (nth 0 (nth 5 game-state))))
         (setf (nth 6 game-state) :game-over)
