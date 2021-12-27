@@ -187,18 +187,24 @@ BACKGROUND-COLOR is the background color."
       (error "Window is not big enough for the required canvas resolution"))
     (with-current-buffer (get-buffer-create buffer-name)
       (set-window-buffer window (current-buffer))
-      ;; TODO: disable scrolling
+      (special-mode)
       (when (boundp 'hl-line-mode) (setq-local hl-line-mode nil))
+      (when (boundp 'global-hl-line-mode) (setq-local global-hl-line-mode nil))
+      (when (boundp 'line-number-mode) (setq-local line-number-mode nil))
+      (when (boundp 'column-number-mode) (setq-local column-number-mode nil))
       (setq-local visible-cursor nil
                   cursor-type nil
                   inhibit-modification-hooks t
                   inhibit-compacting-font-caches t
-                  global-hl-line-mode nil
                   bidi-inhibit-bpa t
-                  buffer-read-only nil)
+                  bidi-display-reordering nil
+                  buffer-read-only nil
+                  mode-line-format nil)
       (erase-buffer)
       (buffer-disable-undo)
+      (jit-lock-mode nil)
       (font-lock-mode -1)
+      (mouse-wheel-mode -1)
       (auto-save-mode -1)
       (goto-char (point-min))
       (face-remap-add-relative 'default :family retro-square-font-family :height pixel-size)
