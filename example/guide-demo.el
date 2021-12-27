@@ -18,7 +18,7 @@
                        :update (lambda (_elapsed game-state _canvas)
                                  ;; (message "[%03d] (%d,%d) elapsed: %fs" (nth 0 game-state) (nth 1 game-state) (nth 2 game-state) elapsed)
                                  (cl-incf (car game-state)))
-                       :render (lambda (game-state canvas)
+                       :render (lambda (_elapsed game-state canvas)
                                  (retro--plot-pixel (nth 1 game-state)
                                                     (nth 2 game-state)
                                                     (ht-get retro-palette-colors->index "#ffffff")

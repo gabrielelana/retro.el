@@ -32,7 +32,7 @@
                                (retro--plot-char (nth 2 game-state) "6" 10 160 canvas)
                                (retro--plot-char (nth 2 game-state) "9" 10 180 canvas)
                                (setf (car game-state) (1+ (car game-state))))
-                     :render (lambda (_game-state _canvas) nil)
+                     :render (lambda (_elapsed _game-state _canvas) nil)
                      :background-color (retro--add-color-to-palette "#000000")))
 
 (defun text-demo-start ()

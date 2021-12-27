@@ -111,14 +111,14 @@
         ))
 
 (defun dino-update (elapsed game-state _canvas)
-  (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed)
+  ;; (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed)
   (retro--scroll-background (nth 1 game-state) (round (* *GROUND-VELOCITY* elapsed)))
   (t-rex-update (nth 2 game-state) elapsed)
   (setf (nth 3 game-state) (update-clouds (nth 3 game-state) elapsed))
   (setf (nth 5 game-state) (update-cactuses (nth 5 game-state) elapsed))
   (cl-incf (car game-state)))
 
-(defun dino-render (game-state canvas)
+(defun dino-render (_elapsed game-state canvas)
   (retro--plot-background (nth 1 game-state) canvas)
   (retro--plot-string (nth 4 game-state)
                       (format *SCORE-TEXT* 0 (nth 0 game-state))

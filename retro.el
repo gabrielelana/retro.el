@@ -950,7 +950,7 @@ To do that wrap your update function with this function like
          (previous-canvas (retro-game-previous-canvas game)))
     (retro--handle-pending-events game-state game)
     (funcall (retro-game-update game) elapsed game-state current-canvas)
-    (funcall (retro-game-render game) game-state current-canvas)
+    (funcall (retro-game-render game) elapsed game-state current-canvas)
     (with-current-buffer (retro-game-buffer-name game)
       (retro--buffer-render current-canvas previous-canvas))
     (retro--reset-canvas previous-canvas)

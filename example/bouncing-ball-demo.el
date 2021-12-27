@@ -29,7 +29,7 @@
                                          (nth 2 game-state) dy
                                          (nth 4 game-state) (+ x dx)
                                          (nth 5 game-state) (+ y dy))))
-                       :render (lambda (game-state canvas)
+                       :render (lambda (_elapsed game-state canvas)
                                  (let ((size (nth 3 game-state))
                                        (x (nth 4 game-state))
                                        (y (nth 5 game-state)))

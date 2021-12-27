@@ -15,7 +15,7 @@
                                  (message "[%03d] elapsed: %fs" (nth 0 game-state) elapsed)
                                  (retro--scroll-background (nth 1 game-state) 3)
                                  (cl-incf (car game-state)))
-                       :render (lambda (game-state canvas)
+                       :render (lambda (_elapsed game-state canvas)
                                  (retro--plot-background (nth 1 game-state) canvas)))))
 
 (defun scrolling-background-demo-start ()

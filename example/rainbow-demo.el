@@ -13,7 +13,7 @@
                      :update (lambda (elapsed game-state _canvas)
                                (message "[%03d] elapsed: %fs" (car game-state) elapsed)
                                (setf (car game-state) (1+ (car game-state))))
-                     :render (lambda (game-state canvas)
+                     :render (lambda (_elapsed game-state canvas)
                                (retro--plot-filled-rectangle 1 1
                                                              (- (retro-canvas-width canvas) 2)
                                                              (- (retro-canvas-height canvas) 2)

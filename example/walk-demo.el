@@ -37,7 +37,7 @@
                        :init (lambda () (list 0 (retro--load-sprite "./asset/walk-demo.sprite" 10 160) t))
                        :update (lambda (_elapsed game-state _canvas)
                                  (cl-incf (car game-state)))
-                       :render (lambda (game-state canvas)
+                       :render (lambda (_elapsed game-state canvas)
                                  (retro--plot-sprite (nth 1 game-state) canvas)))))
 
 (defun walk-demo-start ()

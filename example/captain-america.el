@@ -66,7 +66,7 @@
                                (when (eq 0 (mod (car game-state) 100))
                                  (message "FPS: %f - %f" (/ 1.0 elapsed) elapsed))
                                (cl-incf (car game-state)))
-                     :render (lambda (game-state canvas)
+                     :render (lambda (_elapsed game-state canvas)
                                (retro--plot-sprite (nth 1 game-state) canvas))))
 
 (defun captain-america-start ()

@@ -127,7 +127,7 @@ cell, as if by reproduction.
           (setf (gol-universe game-state) (universe-evolve (gol-universe game-state)))
         (gol-load-next-pattern game-state)))))
 
-(defun gol-show-render (game-state canvas)
+(defun gol-show-render (_elapsed game-state canvas)
   (let ((pixels (retro-canvas-pixels canvas))
         (width (retro-canvas-width canvas))
         (height (retro-canvas-height canvas))
