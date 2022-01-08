@@ -945,6 +945,12 @@ To do that wrap your update function with this function like
 (when (not (fboundp 'garbage-collect-maybe))
   (defun garbage-collect-maybe (_n) nil))
 
+;; TODO(OPT): always keep the canvas length
+;; TODO(OPT): inheirth from special-mode
+
+;; TODO(OPT): extract current-canvas and previous-canvas from game-state,
+;; make them local and pass them as call parameters, save time accessing
+;; the game struct
 (defun retro--game-loop (game &optional game-state last-time)
   "Game loop."
   (let* ((game-state (or game-state (funcall (retro-game-init game))))
@@ -962,13 +968,15 @@ To do that wrap your update function with this function like
     (cl-rotatef (retro-game-current-canvas game) (retro-game-previous-canvas game))
     (if (retro-game-quit-p game)
         (funcall (retro-game-quit game))
-      (run-with-timer 0.025 nil 'retro--game-loop game game-state now)
+      (redisplay t)
+      (run-with-timer 0.001 nil 'retro--game-loop game game-state now)
       (garbage-collect-maybe 4)
       t)))
 
 
 ;;; Buffer
 
+;; TODO(OPT): unroll loop (while-unroll 10 CONDITION BODY)
 (defun retro--buffer-render (current-canvas previous-canvas)
   "Render CANVAS into current buffer."
   (let* ((cpxs (retro-canvas-pixels current-canvas))
@@ -992,6 +1000,7 @@ To do that wrap your update function with this function like
          (i 0))
     (setq-local buffer-read-only nil)
     (while (< i cl)
+      ;; TODO(OPT): optimize from here <<<
       (setq ccc (aref cpxs i)
             pcc (aref ppxs i)
             column (1+ column))
@@ -1007,7 +1016,9 @@ To do that wrap your update function with this function like
         (setq line (1+ line)
               bbcll (* bll line)
               column 0))
+      ;; TODO(OPT): to here >>>
       (if (eq pcc ccc)
+          ;; TODO(OPT): optimize from here <<<
           ;; previous canvas pixel and current canvas pixel are the same
           (when (> length 0)
             ;; plot the accomulated line so far and reset the counters
@@ -1017,6 +1028,7 @@ To do that wrap your update function with this function like
             (setq length 0
                   start column
                   cpc nil))
+        ;; TODO(OPT): to here >>>
         ;; previous canvas pixel and current canvas pixel are different
         (if (eq cpc ccc)
             ;; current pixel and previous pixel are on the same line
