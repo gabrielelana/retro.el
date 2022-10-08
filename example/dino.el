@@ -48,10 +48,13 @@
         (setq t-rex-current-play "running"
               t-rex-current-tween t-rex-running-tween)
         (retro--play-sprite sprite "running")))
-     ((or (equal "hit" t-rex-current-play) (equal "running" t-rex-current-play))
+     ((equal "running" t-rex-current-play)
       (when (funcall t-rex-current-tween elapsed)
         (retro--next-frame-sprite sprite)))
-     (t (error "unreachable")))))
+     ((equal "hit" t-rex-current-play)
+      (when (funcall t-rex-current-tween elapsed)
+        (retro--next-frame-sprite sprite)))
+     (t (error "Unreachable")))))
 
 (defun t-rex-render (sprite canvas)
   (retro--plot-sprite sprite canvas))
@@ -177,8 +180,23 @@
   (retro--play-sprite (nth 2 game-state) "hit")
   (message "GAME OVER"))
 
+(defun game-init! (game-state)
+  (setq t-rex-current-play "running")
+  (setq t-rex-current-tween t-rex-running-tween)
+  (let ((initial-state (dino-init)))
+    (setf
+     (nth 0 game-state) (nth 0 initial-state)
+     (nth 1 game-state) (nth 1 initial-state)
+     (nth 2 game-state) (nth 2 initial-state)
+     (nth 3 game-state) (nth 3 initial-state)
+     (nth 4 game-state) (nth 4 initial-state)
+     (nth 5 game-state) (nth 5 initial-state)
+     (nth 6 game-state) (nth 6 initial-state)
+     )))
 
 (defun dino-init ()
+  (setq t-rex-current-play "running")
+  (setq t-rex-current-tween t-rex-running-tween)
   (list 0
         (retro--load-background "./asset/dino-horizon.sprite" *WIDTH* 0 0 (- *HEIGHT* 12 1))
         (retro--load-sprite "./asset/dino-t-rex.sprite" *T-REX-X* *T-REX-GROUND-Y*)
@@ -190,8 +208,7 @@
 (defun dino-update (elapsed game-state _canvas)
   (if (game-over? game-state)
       (progn
-        (t-rex-update (nth 2 game-state) elapsed)
-        )
+        (t-rex-update (nth 2 game-state) elapsed))
     (when (eq (% (nth 0 game-state) 100) 0)
       (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed))
     (retro--scroll-background (nth 1 game-state) (round (* *GROUND-VELOCITY* elapsed)))
@@ -222,6 +239,7 @@
   (render-cactuses (nth 5 game-state) canvas)
   (t-rex-render (nth 2 game-state) canvas))
 
+
 (defun dino ()
   "Dino must avoid obstacles while running."
   (retro-game-create :name "dino"
@@ -229,7 +247,12 @@
                      :background-color (ht-get retro-palette-colors->index "#ffffff")
                      :bind `(("q" . retro--handle-quit)
                              ("SPC" . (lambda (game-state _)
-                                        (t-rex-jump (nth 2 game-state)))))
+                                        (message t-rex-current-play)
+                                        (cond
+                                         ((equal "running" t-rex-current-play)
+                                          (t-rex-jump (nth 2 game-state)))
+                                         ((equal "hit" t-rex-current-play)
+                                          (game-init! game-state))))))
                      :init 'dino-init
                      :update 'dino-update
                      :render 'dino-render))
