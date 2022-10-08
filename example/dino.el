@@ -238,8 +238,11 @@
                       canvas)
   (render-clouds (nth 3 game-state) canvas)
   (render-cactuses (nth 5 game-state) canvas)
-  (t-rex-render (nth 2 game-state) canvas))
-
+  (t-rex-render (nth 2 game-state) canvas)
+  (when (game-over? game-state)
+    (retro--plot-string (nth 4 game-state)
+                        "GAME OVER"
+                        200 50 10 canvas)))
 
 (defun dino ()
   "Dino must avoid obstacles while running."
