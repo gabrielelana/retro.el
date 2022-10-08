@@ -1,5 +1,11 @@
 ;; -*- lexical-binding: t -*-
 
+;;; Commentary:
+
+;; Library to create retro games in Emacs.
+
+;;; Code:
+
 (require 'retro (expand-file-name "./../retro.el"))
 (require 'retro-tween (expand-file-name "./../retro-tween.el"))
 
@@ -114,14 +120,14 @@
 (defconst *CACTUS-Y* '(100 . 1))
 
 (defun render-cactuses (cactuses canvas)
-  "Render cactuses."
+  "Render CACTUSES on CANVAS."
   (dolist (cactus-coordinates (nth 0 cactuses))
     (setf (retro-tile-x (nth 1 cactuses)) (car cactus-coordinates)
           (retro-tile-y (nth 1 cactuses)) (cdr cactus-coordinates))
     (retro--plot-tile (nth 1 cactuses) canvas)))
 
 (defun update-cactuses (cactuses elapsed)
-  "Update cactuses."
+  "Update CACTUSES after ELAPSED."
   (let ((coordinates (nth 0 cactuses))
         (tile (nth 1 cactuses)))
     (setq coordinates (remove-passed-tiles coordinates (retro-tile-width tile)))
@@ -217,5 +223,13 @@
                      :render 'dino-render))
 
 (defun dino-start ()
+  "Start dino game interactively."
   (interactive)
   (retro--game-loop (dino)))
+
+(provide 'dino)
+
+;; Local Variables:
+;; coding: utf-8
+;; End:
+;;; dino.el ends here
