@@ -158,23 +158,26 @@
                                           (+ (retro-sprite-y ,sprite) (retro-sprite-height ,sprite)))))
 
 (defun bb-intersect? (bbl bbr)
-  "Check intersection between bounding boxes."
+  "Check intersection between bounding boxes BBL and BBR."
   (and (< (bb-left bbl) (bb-right bbr))
        (> (bb-right bbl) (bb-left bbr))
        (< (bb-top bbl) (bb-bottom bbr))
        (> (bb-bottom bbl) (bb-top bbr))))
 
 (defun collision? (t-rex-bb tiles-bb)
-  "Detect collision between T-Rex and some tiles"
+  "Detect collision between T-REX-BB and TILES-BB."
   (->> tiles-bb
        (seq-filter (lambda (tile-bb) (<= (bb-left tile-bb) (bb-left t-rex-bb))))
        (seq-some (lambda (tile-bb) (bb-intersect? t-rex-bb tile-bb)))))
 
 ;;; ============================================================================
 
-(defmacro game-over? (game-state) `(eq (nth 6 game-state) :game-over))
+(defmacro game-over? (game-state)
+  "Is game over in GAME-STATE."
+  `(eq (nth 6 ,game-state) :game-over))
 
 (defun game-over! (game-state)
+  "Set GAME-STATE as game over."
   (setf (nth 6 game-state) :game-over)
   (setq t-rex-current-play "hit"
         t-rex-current-tween t-rex-hit-tween)
@@ -182,6 +185,7 @@
   (message "GAME OVER"))
 
 (defun game-init! (game-state)
+  "Reset GAME-STATE."
   (setq t-rex-current-play "running")
   (setq t-rex-current-tween t-rex-running-tween)
   (let ((initial-state (dino-init)))
@@ -196,6 +200,7 @@
      )))
 
 (defun dino-init ()
+  "Init game-state."
   (setq t-rex-current-play "running")
   (setq t-rex-current-tween t-rex-running-tween)
   (list 0
@@ -207,6 +212,7 @@
         :playing))
 
 (defun dino-update (elapsed game-state _canvas)
+  "Update GAME-STATE after ELAPSED."
   (if (game-over? game-state)
       (progn
         (t-rex-update (nth 2 game-state) elapsed))
@@ -229,6 +235,7 @@
     (cl-incf (car game-state))))
 
 (defun dino-render (_elapsed game-state canvas)
+  "Render GAME-STATE on CANVAS."
   (retro--plot-background (nth 1 game-state) canvas)
   (retro--plot-string (nth 4 game-state)
                       (format *SCORE-TEXT* 0 (nth 0 game-state))
