@@ -1,8 +1,8 @@
-;; -*- lexical-binding: t -*-
+;;; dino.el --- Porting of dino from Chrome to Emacs -*- lexical-binding: t -*-
 
 ;;; Commentary:
 
-;; Library to create retro games in Emacs.
+;; Porting of dino from Chrome to Emacs.
 
 ;;; Code:
 
@@ -38,6 +38,7 @@
     (retro--play-sprite sprite "jumping")))
 
 (defun t-rex-update (sprite elapsed)
+  "Update state of SPRITE t-rex after ELAPSED."
   (let (y)
     (cond
      ((equal "jumping" t-rex-current-play)
