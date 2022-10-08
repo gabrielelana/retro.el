@@ -565,11 +565,11 @@ Separate chars with LETTER-SPACING amount of pixels"
     (dolist (char chars)
       (setq glyph (ht-get (retro-font-glyphs font) char))
       (if (not glyph)
-          (error (format "Unable to find glyph for char `%s` in font" char))
+          (if (equal char " ")
+              (setq x (+ x (retro-glyph-width glyph) (- letter-spacing)))
+            (error (format "Unable to find glyph for char `%s` in font" char)))
         (retro--plot-char font char x y canvas)
-        (if (equal char " ")
-            (setq x (+ x (retro-glyph-width glyph) (- letter-spacing)))
-          (setq x (+ x (retro-glyph-width glyph) letter-spacing)))))))
+        (setq x (+ x (retro-glyph-width glyph) letter-spacing))))))
 
 ;;; Change font color
 (defun retro--change-colors-font (font colors-map)
