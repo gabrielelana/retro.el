@@ -26,6 +26,7 @@
 (defconst *T-REX-TOP-Y* 40)
 
 (defvar t-rex-running-tween (tween-distinct-until-changed (tween-loop (tween 0.3 0 1 'linear))))
+(defvar t-rex-hit-tween (tween-distinct-until-changed (tween-loop (tween 0.5 0 1 'linear))))
 (defvar t-rex-current-tween t-rex-running-tween)
 (defvar t-rex-current-play "running")
 
@@ -47,7 +48,7 @@
         (setq t-rex-current-play "running"
               t-rex-current-tween t-rex-running-tween)
         (retro--play-sprite sprite "running")))
-     ((equal "running" t-rex-current-play)
+     ((or (equal "hit" t-rex-current-play) (equal "running" t-rex-current-play))
       (when (funcall t-rex-current-tween elapsed)
         (retro--next-frame-sprite sprite)))
      (t (error "unreachable")))))
@@ -167,6 +168,16 @@
 
 ;;; ============================================================================
 
+(defmacro game-over? (game-state) `(eq (nth 6 game-state) :game-over))
+
+(defun game-over! (game-state)
+  (setf (nth 6 game-state) :game-over)
+  (setq t-rex-current-play "hit"
+        t-rex-current-tween t-rex-hit-tween)
+  (retro--play-sprite (nth 2 game-state) "hit")
+  (message "GAME OVER"))
+
+
 (defun dino-init ()
   (list 0
         (retro--load-background "./asset/dino-horizon.sprite" *WIDTH* 0 0 (- *HEIGHT* 12 1))
@@ -174,13 +185,15 @@
         (list (initial-tiles *CLOUD-MAX* *CLOUD-Y* *CLOUD-GAP*) (retro--load-tile "./asset/dino-cloud.sprite" 0 0))
         (retro--load-font "./asset/dino.font")
         (list (initial-tiles *CACTUS-MAX* *CACTUS-Y* *CACTUS-GAP*) (retro--load-tile "./asset/dino-cactus-single-big.sprite" 0 0))
-        :playing
-        ))
+        :playing))
 
 (defun dino-update (elapsed game-state _canvas)
-  (if (eq (nth 6 game-state) :game-over)
-      nil
-    ;; (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed)
+  (if (game-over? game-state)
+      (progn
+        (t-rex-update (nth 2 game-state) elapsed)
+        )
+    (when (eq (% (nth 0 game-state) 100) 0)
+      (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed))
     (retro--scroll-background (nth 1 game-state) (round (* *GROUND-VELOCITY* elapsed)))
     (t-rex-update (nth 2 game-state) elapsed)
     (setf (nth 3 game-state) (update-clouds (nth 3 game-state) elapsed))
@@ -189,13 +202,12 @@
           (cactus-height (retro-tile-height (nth 1 (nth 5 game-state)))))
       (when (collision? (bb-sprite (nth 2 game-state))
                         (mapcar (lambda (coords)
-                                  (cons (cons (+ (car coords) (* cactus-width 0.25))
+                                  (cons (cons (car coords)
                                               (cdr coords))
-                                        (cons (+ (car coords) (* cactus-width 0.75))
+                                        (cons (+ (car coords) (* cactus-width 0.6))
                                               (+ (cdr coords) cactus-height))))
                                 (nth 0 (nth 5 game-state))))
-        (setf (nth 6 game-state) :game-over)
-        (message "GAME OVER")))
+        (game-over! game-state)))
     (cl-incf (car game-state))))
 
 (defun dino-render (_elapsed game-state canvas)
