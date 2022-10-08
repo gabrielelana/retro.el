@@ -53,7 +53,7 @@
   "Font family used to create the illusion of pixels.")
 
 ;; (defvar retro-square-font-family "Topaz-8"
-;;   "Font family used to create the illusion of pixels.")
+;   "Font family used to create the illusion of pixels.")
 
 
 ;;; Palette
@@ -652,7 +652,7 @@ Colors should be specified as RGB hex string (ex. \"0xffffff\")
 
 ;;; Load sprite from file
 (defun retro--load-sprite (file-path &optional x y)
-  "Load a SPRITE from FILE-PATH."
+  "Load a SPRITE from FILE-PATH at (X, Y)."
   (with-temp-buffer
     (insert-file-contents file-path)
     (goto-char (point-min))
@@ -915,8 +915,7 @@ To do that wrap your update function with this function like
 
     (retro-game ...
                 :update (update-every 0.5 'your-update-function)
-                ...)
-"
+                ...)"
   (let ((since-last-update 0.0))
     (lambda (elapsed game-state canvas)
       (setq since-last-update (+ since-last-update elapsed))
