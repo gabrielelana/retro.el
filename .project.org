@@ -1,6 +1,6 @@
 #+TITLE: retro.el
 
-* RETRO-001 Dino running game [16/26]
+* RETRO-001 Dino running game [19/27]
 Implement "Dino running game" included in Chrome at ~chrome://dino/~
 
 Reference for constants, code and assets
@@ -28,14 +28,15 @@ Reference for constants, code and assets
 - [X] Load a limited number of clouds to preserve memory
 - [X] Load a limited number of cactus to preserve memory
 - [X] More forgiving bounding boxes for cactus
-- [ ] T-Rex hit animation
-- [ ] Restart game by hitting space when game-over
-- [ ] Display something when game-over?
-- [ ] Add dock animation for t-rex
+- [X] T-Rex hit animation
+- [X] Restart game by hitting space when game-over
+- [X] Display "GAME OVER" when game-over?
 - [ ] Add pterodactyls
 - [ ] Add collision between pterodactyl and t-rex
+- [ ] Add more cactus
 - [ ] Make the "speed" of the game a variable and calculate everything accordingly
 - [ ] Keep the highest score somewhere
+- [ ] Add dock animation for t-rex
 - [ ] Start with ~offline~ || ~dino~ autoloaded command
 - [ ] Release as ~dino.el~
 
@@ -53,10 +54,18 @@ Release ~retro.el~ version 0.0.1
 - [ ] Experiment performance impact of using ~defclass~ and ~defmethod~
 - [ ] Explore how to implement state machines in common lisp
 
-* Refile [2/53]
+* Refile [2/65]
 Tasks to be refiled somewhere else in this project
 
+- [ ] Function ~retro-font-string-width~ to calculate width of a string in a
+  particular font
+- [ ] DEMO: fire effect https://lodev.org/cgtutor/fire.html
+- [ ] DEMO: other demos http://demo-effects.sourceforge.net/
 - [ ] Starting Canvas from Buffer position ~(0, 0)~ will improve performance?
+- [ ] Performance: will diff cause fragmentation? Try to plot always everything and see if performance are more stable
+- [ ] Performance: try to reduce fragmentation of lines with the same font-lock, come up with heuristics
+  - Leave unchanged only if the whole line is unchanged?
+  - Add another passage to remove fragmentation?
 - [ ] Pixel grid is a Canvas??? Use Canvas name, Use Screen for what previously called Canvas
 - [ ] Try 320x240 with full background (Captain America + tiles)
 - [ ] Simulate key-down/key-up with global timer VS key-press
@@ -66,6 +75,7 @@ Tasks to be refiled somewhere else in this project
   - [ ] ~(retro--vector-resize-to-dimension from-width from-height vector to-width to-height) -> vector~
 - [ ] Rotate pixel-grid
 - [ ] Compose pixel-grids -> pixel-grid
+- [ ] Zelda: mechanics, movement, animation, fantastic!!! https://www.youtube.com/watch?v=QU1pPzEGrqw
 - [ ] Create viewport on a canvas or another viewport: a canvas is a viewport,
   when plot something to a viewport if outside of it then plot nothing even if
   inside the original canvas. This feature will enable us to have different part
@@ -74,6 +84,7 @@ Tasks to be refiled somewhere else in this project
   the game, the frame number, current frame per seconds, ...
 - [ ] ~retro-sprite-bb~ (Bounding Box)
 - [ ] ~retro-sprite-aabb~ (Axis Oriented Bounding Box)
+- [ ] Pixel perfect collision detection: ~retro-sprite-bb~ && ~(retro-collide-pp pixel-grid pixel-grid)~
 - [X] DEMO: Captain America walking in every direction
 - [ ] DEMO: Captain America, walking animation done in update, not in key handlers, for smoother animation, how?
 - [ ] DEMO: Captain America, add path (grass/water) in a map bigger than canvas, maybe a labyrinth, follow the sprite
@@ -81,7 +92,7 @@ Tasks to be refiled somewhere else in this project
   - Buffer (Emacs)
   - Canvas
   - Viewport
-  - PixelGrid
+  - Screen
   - Tile
   - Background
   - Sprite
@@ -104,7 +115,12 @@ Tasks to be refiled somewhere else in this project
 - [ ] add bounding box to sprite and tiles
 - [ ] functions to compose one or more tiles
 - [ ] test with calibrate.sprite and clipping with buttercup?
+- [ ] [[https://www.youtube.com/watch?v=8dfePlONtls][Code a Snake Game with Python and Pygame]]
+- [ ] [[https://www.youtube.com/playlist?list=PLo6lBZn6hgca1T7cNZXpiq4q395ljbEI_][2D Physics Engine from Scratch (JS)]] YouTube playlist
+- [ ] [[https://www.youtube.com/playlist?list=PLtrSb4XxIVbpZpV65kk73OoUcIrBzoSiO][Coding a 2D Physics Engine]] YouTube playlist
+- [ ] https://developer.ibm.com/tutorials/wa-build2dphysicsengine/
 - [ ] learn about game engines (dragonfly book)
+- [ ] https://courses.pikuma.com/courses/2dgameengine
 - [ ] something for gravity, velocity and damping + ground
   - https://dthompson.us/projects/chickadee.html
   - https://dthompson.us/manuals/chickadee/Rectangles.html
@@ -146,6 +162,7 @@ Tasks to be refiled somewhere else in this project
 - [ ] GAME: game boy emulator?
 - [ ] GAME: [[https://processing.org][processing]] clone?
 - [ ] GAME: wonderboy ([[https://github.com/kimidomaru/Wonder-Boy-Unity-5][assets]])
+- [ ] GAME: pick one of [[https://js13kgames.com/#winners][js13k]] games
 
 * Unrelated
 Tasks unrelated to this project
