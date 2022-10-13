@@ -184,7 +184,7 @@
   (retro--play-sprite (nth 2 game-state) "hit")
   (message "GAME OVER"))
 
-(defun game-init! (game-state)
+(defun game-reset! (game-state)
   "Reset GAME-STATE."
   (setq t-rex-current-play "running")
   (setq t-rex-current-tween t-rex-running-tween)
@@ -237,14 +237,14 @@
 (defun dino-render (_elapsed game-state canvas)
   "Render GAME-STATE on CANVAS."
   (retro--plot-background (nth 1 game-state) canvas)
+  (render-clouds (nth 3 game-state) canvas)
+  (render-cactuses (nth 5 game-state) canvas)
   (retro--plot-string (nth 4 game-state)
                       (format *SCORE-TEXT* 0 (nth 0 game-state))
                       *SCORE-X*
                       *SCORE-Y*
                       2
                       canvas)
-  (render-clouds (nth 3 game-state) canvas)
-  (render-cactuses (nth 5 game-state) canvas)
   (t-rex-render (nth 2 game-state) canvas)
   (when (game-over? game-state)
     (retro--plot-string (nth 4 game-state)
@@ -258,12 +258,11 @@
                      :background-color (ht-get retro-palette-colors->index "#ffffff")
                      :bind `(("q" . retro--handle-quit)
                              ("SPC" . (lambda (game-state _)
-                                        (message t-rex-current-play)
                                         (cond
                                          ((equal "running" t-rex-current-play)
                                           (t-rex-jump (nth 2 game-state)))
                                          ((equal "hit" t-rex-current-play)
-                                          (game-init! game-state))))))
+                                          (game-reset! game-state))))))
                      :init 'dino-init
                      :update 'dino-update
                      :render 'dino-render))
