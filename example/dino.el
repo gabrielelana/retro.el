@@ -31,6 +31,8 @@
 (defvar t-rex-current-tween t-rex-running-tween)
 (defvar t-rex-current-play "running")
 
+(defvar pterodactyl-tween (tween-distinct-until-changed (tween-loop (tween 0.3 0 1 'linear))))
+
 (defun t-rex-jump (sprite)
   (when (not (equal "jumping" t-rex-current-play))
     (setq t-rex-current-play "jumping"
@@ -75,6 +77,7 @@ TILE (list tile-instance (min-y . gap-y) tile-width)"
         (cactus-double-big (retro--load-tile (asset "dino-cactus-double-big.sprite") 0 0))
         (cactus-cluster-small (retro--load-tile (asset "dino-cactus-cluster-small.sprite") 0 0))
         (cactus-cluster-big (retro--load-tile (asset "dino-cactus-cluster-big.sprite") 0 0))
+        (pterodactyl (retro--load-sprite (asset "dino-pterodactyl.sprite") 0 0))
         )
     (ht (:cloud (list cloud *CLOUD-Y* (retro-tile-width cloud)))
         (:cactus-single-big (list cactus-single-big *CACTUS-Y* (retro-tile-width cactus-single-big)))
@@ -82,8 +85,7 @@ TILE (list tile-instance (min-y . gap-y) tile-width)"
         (:cactus-double-small (list cactus-double-small '(110 . 1) (retro-tile-width cactus-double-small)))
         (:cactus-double-big (list cactus-double-big *CACTUS-Y* (retro-tile-width cactus-double-big)))
         (:cactus-cluster-small (list cactus-cluster-small '(110 . 1) (retro-tile-width cactus-cluster-small)))
-        (:cactus-cluster-big (list cactus-cluster-big *CACTUS-Y* (retro-tile-width cactus-cluster-big))))))
-
+        (:pterodactyl (list pterodactyl '(50 . 50) (retro-sprite-width pterodactyl))))))
 
 (defun dino--spawn-initial-tiles (tiles tiles-count tile-x-gap tile-kinds)
   "Spawn initial TILES-COUNT tiles from TILES of TILE-KINDS."
@@ -129,9 +131,14 @@ TILE-KINDS is the kind of tiles that can be spawn"
     (let* ((tile-kind (car spawned-tile))
            (tile-coordindates (cdr spawned-tile))
            (tile (car (ht-get tiles tile-kind))))
-      (setf (retro-tile-x tile) (car tile-coordindates)
-            (retro-tile-y tile) (cdr tile-coordindates))
-      (retro--plot-tile tile canvas))))
+      (when (retro-tile-p tile)
+        (setf (retro-tile-x tile) (car tile-coordindates)
+              (retro-tile-y tile) (cdr tile-coordindates))
+        (retro--plot-tile tile canvas))
+      (when (retro-sprite-p tile)
+        (setf (retro-sprite-x tile) (car tile-coordindates)
+              (retro-sprite-y tile) (cdr tile-coordindates))
+        (retro--plot-sprite tile canvas)))))
 
 (defun dino--kill-tiles (tiles spawned-tiles)
   "Remove tiles in SPAWNED-TILES.
@@ -207,6 +214,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
                         :cactus-double-small
                         :cactus-double-big
                         :cactus-cluster-small
+                        :pterodactyl
                         ;; :cactus-cluster-big
                         ))
 
@@ -247,14 +255,14 @@ TILE-KINDS is the list of tile kinds that can be spawned"
   (setq t-rex-current-play "running")
   (setq t-rex-current-tween t-rex-running-tween)
   (let ((tiles (dino--load-tiles)))
-    (list 0                       ; 0
-          (retro--load-background (asset "dino-horizon.sprite") *WIDTH* 0 0 (- *HEIGHT* 12 1)) ;1
-          (retro--load-sprite (asset "dino-t-rex.sprite") *T-REX-X* *T-REX-GROUND-Y*) ;2
-          (dino--spawn-initial-tiles tiles *CLOUD-MAX* *CLOUD-GAP* '(:cloud)) ; 3
-          (dino--spawn-initial-tiles tiles *CACTUS-MAX* *CACTUS-GAP* *OBSTACLES*) ; 4
-          (retro--load-font (asset "dino.font")) ; 5
-          :playing                ; 6
-          tiles      ; 7
+    (list 0                       ; 0 - game counter
+          (retro--load-background (asset "dino-horizon.sprite") *WIDTH* 0 0 (- *HEIGHT* 12 1)) ; 1 -- background
+          (retro--load-sprite (asset "dino-t-rex.sprite") *T-REX-X* *T-REX-GROUND-Y*) ; 2 -- t-rex
+          (dino--spawn-initial-tiles tiles *CLOUD-MAX* *CLOUD-GAP* '(:cloud)) ; 3 -- clouds
+          (dino--spawn-initial-tiles tiles *CACTUS-MAX* *CACTUS-GAP* *OBSTACLES*) ; 4 -- obstacles
+          (retro--load-font (asset "dino.font")) ; 5 -- font
+          :playing                ; 6 -- game status
+          tiles      ; 7 -- loaded assets
           )))
 
 (defun dino-update (elapsed game-state _canvas)
@@ -273,12 +281,21 @@ TILE-KINDS is the list of tile kinds that can be spawned"
                       (mapcar (lambda (obstacle)
                                 (let* ((obstacle-kind (car obstacle))
                                        (obstacle-coordinates (cdr obstacle))
-                                       (obstacle (car (ht-get (nth 7 game-state) obstacle-kind))))
-                                  (cons obstacle-coordinates
-                                        (cons (+ (car obstacle-coordinates) (retro-tile-width obstacle))
-                                              (+ (cdr obstacle-coordinates) (retro-tile-height obstacle))))))
+                                       (obstacle (car (ht-get (nth 7 game-state) obstacle-kind)))
+                                       res)
+                                  (when (retro-tile-p obstacle)
+                                    (setq res (cons obstacle-coordinates
+                                                    (cons (+ (car obstacle-coordinates) (retro-tile-width obstacle))
+                                                          (+ (cdr obstacle-coordinates) (retro-tile-height obstacle))))))
+                                  (when (retro-sprite-p obstacle)
+                                    (setq res (cons obstacle-coordinates
+                                                    (cons (+ (car obstacle-coordinates) (retro-sprite-width obstacle))
+                                                          (+ (cdr obstacle-coordinates) (retro-sprite-height obstacle))))))
+                                  res))
                               (nth 4 game-state)))
       (game-over! game-state))
+    (when (funcall pterodactyl-tween elapsed)
+      (retro--next-frame-sprite (car (ht-get (nth 7 game-state) :pterodactyl))))
     (cl-incf (car game-state))))
 
 (defun dino-render (_elapsed game-state canvas)
