@@ -328,6 +328,12 @@ TILE-KINDS is the list of tile kinds that can be spawned"
         (if (eq game-status :playing) :pause :playing))
       (nth 6 game-state)))
 
+(defun dino--jump-or-reset (game-state _)
+  "Make T-REX jump or reset GAME-STATE when game over."
+  (cond ((game-over? game-state) (game-reset! game-state))
+        ((game-paused? game-state) game-state)
+        (t (t-rex-jump (nth 2 game-state)))))
+
 (defun dino ()
   "Dino must avoid obstacles while running."
   (retro-game-create :name "dino"
@@ -335,12 +341,9 @@ TILE-KINDS is the list of tile kinds that can be spawned"
                      :background-color (ht-get retro-palette-colors->index "#ffffff")
                      :bind `(("q" . retro--handle-quit)
                              ("p" . dino--toggle-pause)
-                             ("SPC" . (lambda (game-state _)
-                                        (cond
-                                         ((equal "running" t-rex-current-play)
-                                          (t-rex-jump (nth 2 game-state)))
-                                         ((equal "hit" t-rex-current-play)
-                                          (game-reset! game-state))))))
+                             ("<up>" . dino--jump-or-reset)
+                             ("<down>" . (lambda (game-state _) (message "DOWN")))
+                             ("SPC" . dino--jump-or-reset))
                      :init 'dino-init
                      :update 'dino-update
                      :render 'dino-render))
