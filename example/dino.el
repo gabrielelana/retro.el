@@ -17,6 +17,7 @@
 (defconst *SCORE-Y* 20)
 (defconst *SCORE-TEXT* "HI %05d %05d")
 (defconst *GROUND-VELOCITY* 200)
+(defconst *ASSET-DIRECTORY* (file-name-as-directory (concat (file-name-directory (buffer-file-name)) "asset")))
 
 ;;; ============================================================================
 ;;; T-Rex
@@ -63,31 +64,88 @@
 ;;; ============================================================================
 ;;; Tiles
 
-(defun initial-tiles (tiles-count tile-y tile-gap)
-  "Generate the initial tiles."
-  (let ((tiles (first-tile tile-y)))
-    (dotimes (_ (1- tiles-count))
-      (setq tiles (append-tile tiles tiles-count tile-y tile-gap)))
-    tiles))
+(defun dino--load-tiles ()
+  "Load game tiles.
 
-(defun first-tile (tile-y)
-  "Generate the first tile."
-  (list (cons (+ *WIDTH* 50)
-              (+ (car tile-y) (random (cdr tile-y))))))
+TILE (list tile-instance (min-y . gap-y) tile-width)"
+  (let ((cloud (retro--load-tile (asset "dino-cloud.sprite") 0 0))
+        (cactus-single-big (retro--load-tile (asset "dino-cactus-single-big.sprite") 0 0)))
+    (ht (:cloud (list cloud *CLOUD-Y* (retro-tile-width cloud)))
+        (:cactus-single-big (list cactus-single-big *CACTUS-Y* (retro-tile-width cactus-single-big))))))
 
-(defun append-tile (tiles tiles-count tile-y tile-gap)
-  "Append one tile to list of tiles if there are less tiles than wanted."
-  (if (>= (length tiles) tiles-count)
-      tiles
-    (let ((last-tile (car (last tiles)))
-          x y)
-      (setq x (+ (car last-tile) (car tile-gap) (random (cdr tile-gap)))
-            y (+ (car tile-y) (random (cdr tile-y))))
-      (reverse (cons (cons x y) (reverse tiles))))))
+(defun dino--spawn-initial-tiles (tiles tiles-count tile-x-gap tile-kinds)
+  "Spawn initial TILES-COUNT tiles from TILES of TILE-KINDS."
+  (dino--spawn-tiles
+   tiles
+   (list (dino--spawn-first-tile tiles (nth (random (seq-length tile-kinds)) tile-kinds)))
+   (1- tiles-count)
+   tile-x-gap
+   tile-kinds))
 
-(defun remove-passed-tiles (tiles tile-width)
-  "Remove tiles that are no more visible."
-  (seq-filter (lambda (tile) (> (+ (car tile) tile-width) 0)) tiles))
+(defun dino--spawn-first-tile (tiles tile-kind)
+  "Spawn the first tile from TILES with TILE-KIND.
+
+Spawn te first tile outside the visible screen"
+  (dino--spawn-tile tiles (+ *WIDTH* 50) tile-kind))
+
+(defun dino--spawn-tile (tiles tile-x tile-kind)
+  "Spawn a tile from TILES with TILE-KIND at TILE-X."
+  (let* ((tile (ht-get tiles tile-kind))
+         (tile-y-min (car (nth 1 tile)))
+         (tile-y-gap (cdr (nth 1 tile))))
+    (cons tile-kind (cons tile-x (+ tile-y-min (random tile-y-gap))))))
+
+(defun dino--spawn-tiles (tiles spawned-tiles tiles-count tile-x-gap tile-kinds)
+  "Spawn one or more TILES if SPAWNED-TILES are less than TILES-COUNT.
+
+SPAWNED-TILES is (list (cons tile-kind tile-coordinates))
+
+TILE-X-GAP is (cons min-x-gap max-x-gap)
+TILE-KINDS is the kind of tiles that can be spawn"
+  (let ((last-tile (cdar (last spawned-tiles))) x)
+    (while (< (length spawned-tiles) tiles-count)
+      (setq x (+ (car last-tile) (car tile-x-gap) (random (cdr tile-x-gap)))
+            tile-kind (nth (random (seq-length tile-kinds)) tile-kinds)
+            new-tile (dino--spawn-tile tiles x tile-kind)
+            spawned-tiles (reverse (cons new-tile (reverse spawned-tiles)))
+            last-tile (cdr new-tile)))
+    spawned-tiles))
+
+(defun dino--render-tiles (tiles spawned-tiles canvas)
+  "Render SPAWNED-TILES from TILES on CANVAS."
+  (dolist (spawned-tile spawned-tiles)
+    (let* ((tile-kind (car spawned-tile))
+           (tile-coordindates (cdr spawned-tile))
+           (tile (car (ht-get tiles tile-kind))))
+      (setf (retro-tile-x tile) (car tile-coordindates)
+            (retro-tile-y tile) (cdr tile-coordindates))
+      (retro--plot-tile tile canvas))))
+
+(defun dino--kill-tiles (tiles spawned-tiles)
+  "Remove tiles in SPAWNED-TILES.
+
+TILES is the collection of available tiles in the game"
+  (let (tile-kind tile-coordinates tile-width)
+    (seq-filter (lambda (spawned-tile)
+                  (setq tile-kind (car spawned-tile)
+                        tile-coordinates (cdr spawned-tile)
+                        tile-width (nth 2 (ht-get tiles tile-kind)))
+                  (> (+ (car tile-coordinates) tile-width) 0))
+                spawned-tiles)))
+
+(defun dino--update-tiles (tiles spawned-tiles tiles-count tile-x-gap tile-velocity tile-kinds elapsed)
+  "Update tiles in SPAWNED-TILES after ELAPSED.
+
+TILES is the collection of available tiles in the game
+TILES-COUNT is the max number of tiles
+TILE-X-GAP is (cons min-x-gap max-x-gap)
+TILE-KINDS is the list of tile kinds that can be spawned"
+  (setq spawned-tiles (dino--kill-tiles tiles spawned-tiles)
+        spawned-tiles (dino--spawn-tiles tiles spawned-tiles tiles-count tile-x-gap tile-kinds)
+        spawned-tiles (mapcar (lambda (spawned-tile)
+                                (setf (cadr spawned-tile) (- (cadr spawned-tile) (round (* tile-velocity elapsed))))
+                                spawned-tile)
+                              spawned-tiles)))
 
 ;;; ============================================================================
 ;;; Clouds
@@ -97,52 +155,12 @@
 (defconst *CLOUD-VELOCITY* 100.0)  ; pixels per second
 (defconst *CLOUD-MAX* 6)
 
-(defun render-clouds (clouds canvas)
-  "Render clouds."
-  (dolist (cloud-coordinates (nth 0 clouds))
-    (setf (retro-tile-x (nth 1 clouds)) (car cloud-coordinates)
-          (retro-tile-y (nth 1 clouds)) (cdr cloud-coordinates))
-    (retro--plot-tile (nth 1 clouds) canvas)))
-
-(defun update-clouds (clouds elapsed)
-  "Update clouds."
-  (let ((coordinates (nth 0 clouds))
-        (tile (nth 1 clouds)))
-    (setq coordinates (remove-passed-tiles coordinates (retro-tile-width tile)))
-    (while (< (length coordinates) *CLOUD-MAX*)
-      (setq coordinates (append-tile coordinates *CLOUD-MAX* *CLOUD-Y* *CLOUD-GAP*)))
-    (setq coordinates
-          (mapcar (lambda (xy)
-                    (cons (- (car xy) (round (* *CLOUD-VELOCITY* elapsed))) (cdr xy)))
-                  coordinates))
-    (list coordinates tile)))
-
 ;;; ============================================================================
 ;;; Cactus
 
 (defconst *CACTUS-MAX* 3)
 (defconst *CACTUS-GAP* '(180 . 320))
 (defconst *CACTUS-Y* '(100 . 1))
-
-(defun render-cactuses (cactuses canvas)
-  "Render CACTUSES on CANVAS."
-  (dolist (cactus-coordinates (nth 0 cactuses))
-    (setf (retro-tile-x (nth 1 cactuses)) (car cactus-coordinates)
-          (retro-tile-y (nth 1 cactuses)) (cdr cactus-coordinates))
-    (retro--plot-tile (nth 1 cactuses) canvas)))
-
-(defun update-cactuses (cactuses elapsed)
-  "Update CACTUSES after ELAPSED."
-  (let ((coordinates (nth 0 cactuses))
-        (tile (nth 1 cactuses)))
-    (setq coordinates (remove-passed-tiles coordinates (retro-tile-width tile)))
-    (while (< (length coordinates) *CACTUS-MAX*)
-      (setq coordinates (append-tile coordinates *CACTUS-MAX* *CACTUS-Y* *CACTUS-GAP*)))
-    (setq coordinates
-          (mapcar (lambda (xy)
-                    (cons (- (car xy) (round (* *GROUND-VELOCITY* elapsed))) (cdr xy)))
-                  coordinates))
-    (list coordinates tile)))
 
 ;;; ============================================================================
 ;;; Collision detection
@@ -197,19 +215,27 @@
      (nth 4 game-state) (nth 4 initial-state)
      (nth 5 game-state) (nth 5 initial-state)
      (nth 6 game-state) (nth 6 initial-state)
+     (nth 7 game-state) (nth 7 initial-state)
      )))
+
+(defmacro asset (file-name)
+  "Absolute file path of asset FILE-NAME."
+  `(concat ,*ASSET-DIRECTORY* ,file-name))
 
 (defun dino-init ()
   "Init game-state."
   (setq t-rex-current-play "running")
   (setq t-rex-current-tween t-rex-running-tween)
-  (list 0
-        (retro--load-background "./asset/dino-horizon.sprite" *WIDTH* 0 0 (- *HEIGHT* 12 1))
-        (retro--load-sprite "./asset/dino-t-rex.sprite" *T-REX-X* *T-REX-GROUND-Y*)
-        (list (initial-tiles *CLOUD-MAX* *CLOUD-Y* *CLOUD-GAP*) (retro--load-tile "./asset/dino-cloud.sprite" 0 0))
-        (retro--load-font "./asset/dino.font")
-        (list (initial-tiles *CACTUS-MAX* *CACTUS-Y* *CACTUS-GAP*) (retro--load-tile "./asset/dino-cactus-single-big.sprite" 0 0))
-        :playing))
+  (let ((tiles (dino--load-tiles)))
+    (list 0                       ; 0
+          (retro--load-background (asset "dino-horizon.sprite") *WIDTH* 0 0 (- *HEIGHT* 12 1)) ;1
+          (retro--load-sprite (asset "dino-t-rex.sprite") *T-REX-X* *T-REX-GROUND-Y*) ;2
+          (dino--spawn-initial-tiles tiles *CLOUD-MAX* *CLOUD-GAP* '(:cloud)) ; 3
+          (dino--spawn-initial-tiles tiles *CACTUS-MAX* *CACTUS-GAP* '(:cactus-single-big)) ; 4
+          (retro--load-font (asset "dino.font")) ; 5
+          :playing                ; 6
+          tiles      ; 7
+          )))
 
 (defun dino-update (elapsed game-state _canvas)
   "Update GAME-STATE after ELAPSED."
@@ -220,26 +246,27 @@
       (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed))
     (retro--scroll-background (nth 1 game-state) (round (* *GROUND-VELOCITY* elapsed)))
     (t-rex-update (nth 2 game-state) elapsed)
-    (setf (nth 3 game-state) (update-clouds (nth 3 game-state) elapsed))
-    (setf (nth 5 game-state) (update-cactuses (nth 5 game-state) elapsed))
-    (let ((cactus-width (retro-tile-width (nth 1 (nth 5 game-state))))
-          (cactus-height (retro-tile-height (nth 1 (nth 5 game-state)))))
-      (when (collision? (bb-sprite (nth 2 game-state))
-                        (mapcar (lambda (coords)
-                                  (cons (cons (car coords)
-                                              (cdr coords))
-                                        (cons (+ (car coords) (* cactus-width 0.6))
-                                              (+ (cdr coords) cactus-height))))
-                                (nth 0 (nth 5 game-state))))
-        (game-over! game-state)))
+    (setf (nth 3 game-state) (dino--update-tiles (nth 7 game-state) (nth 3 game-state) *CLOUD-MAX* *CLOUD-GAP* *CLOUD-VELOCITY* '(:cloud) elapsed))
+    (setf (nth 4 game-state) (dino--update-tiles (nth 7 game-state) (nth 4 game-state) *CACTUS-MAX* *CACTUS-GAP* *GROUND-VELOCITY* '(:cactus-single-big) elapsed))
+    ;; collision detection
+    (when (collision? (bb-sprite (nth 2 game-state))
+                      (mapcar (lambda (obstacle)
+                                (let* ((obstacle-kind (car obstacle))
+                                       (obstacle-coordinates (cdr obstacle))
+                                       (obstacle (car (ht-get (nth 7 game-state) obstacle-kind))))
+                                  (cons obstacle-coordinates
+                                        (cons (+ (car obstacle-coordinates) (retro-tile-width obstacle))
+                                              (+ (cdr obstacle-coordinates) (retro-tile-height obstacle))))))
+                              (nth 4 game-state)))
+      (game-over! game-state))
     (cl-incf (car game-state))))
 
 (defun dino-render (_elapsed game-state canvas)
   "Render GAME-STATE on CANVAS."
   (retro--plot-background (nth 1 game-state) canvas)
-  (render-clouds (nth 3 game-state) canvas)
-  (render-cactuses (nth 5 game-state) canvas)
-  (retro--plot-string (nth 4 game-state)
+  (dino--render-tiles (nth 7 game-state) (nth 3 game-state) canvas)
+  (dino--render-tiles (nth 7 game-state) (nth 4 game-state) canvas)
+  (retro--plot-string (nth 5 game-state)
                       (format *SCORE-TEXT* 0 (nth 0 game-state))
                       *SCORE-X*
                       *SCORE-Y*
@@ -247,7 +274,7 @@
                       canvas)
   (t-rex-render (nth 2 game-state) canvas)
   (when (game-over? game-state)
-    (retro--plot-string (nth 4 game-state)
+    (retro--plot-string (nth 5 game-state)
                         "GAME OVER"
                         200 50 10 canvas)))
 
