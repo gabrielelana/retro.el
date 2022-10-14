@@ -1,6 +1,6 @@
 #+TITLE: retro.el
 
-* RETRO-001 Dino running game [19/30]
+* RETRO-001 Dino running game [20/31]
 Implement "Dino running game" included in Chrome at ~chrome://dino/~
 
 Reference for constants, code and assets
@@ -31,9 +31,9 @@ Reference for constants, code and assets
 - [X] T-Rex hit animation
 - [X] Restart game by hitting space when game-over
 - [X] Display "GAME OVER" when game-over?
+- [X] Add more cactus
 - [ ] Add pterodactyls
 - [ ] Add collision between pterodactyl and t-rex
-- [ ] Add more cactus
 - [ ] Pause game by pressing "p"
 - [ ] Make the "speed" of the game a variable and calculate everything accordingly
 - [ ] Keep the highest score somewhere

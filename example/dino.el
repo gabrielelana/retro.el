@@ -69,9 +69,21 @@
 
 TILE (list tile-instance (min-y . gap-y) tile-width)"
   (let ((cloud (retro--load-tile (asset "dino-cloud.sprite") 0 0))
-        (cactus-single-big (retro--load-tile (asset "dino-cactus-single-big.sprite") 0 0)))
+        (cactus-single-big (retro--load-tile (asset "dino-cactus-single-big.sprite") 0 0))
+        (cactus-single-small (retro--load-tile (asset "dino-cactus-single-small.sprite") 0 0))
+        (cactus-double-small (retro--load-tile (asset "dino-cactus-double-small.sprite") 0 0))
+        (cactus-double-big (retro--load-tile (asset "dino-cactus-double-big.sprite") 0 0))
+        (cactus-cluster-small (retro--load-tile (asset "dino-cactus-cluster-small.sprite") 0 0))
+        (cactus-cluster-big (retro--load-tile (asset "dino-cactus-cluster-big.sprite") 0 0))
+        )
     (ht (:cloud (list cloud *CLOUD-Y* (retro-tile-width cloud)))
-        (:cactus-single-big (list cactus-single-big *CACTUS-Y* (retro-tile-width cactus-single-big))))))
+        (:cactus-single-big (list cactus-single-big *CACTUS-Y* (retro-tile-width cactus-single-big)))
+        (:cactus-single-small (list cactus-single-small '(110 . 1) (retro-tile-width cactus-single-small)))
+        (:cactus-double-small (list cactus-double-small '(110 . 1) (retro-tile-width cactus-double-small)))
+        (:cactus-double-big (list cactus-double-big *CACTUS-Y* (retro-tile-width cactus-double-big)))
+        (:cactus-cluster-small (list cactus-cluster-small '(110 . 1) (retro-tile-width cactus-cluster-small)))
+        (:cactus-cluster-big (list cactus-cluster-big *CACTUS-Y* (retro-tile-width cactus-cluster-big))))))
+
 
 (defun dino--spawn-initial-tiles (tiles tiles-count tile-x-gap tile-kinds)
   "Spawn initial TILES-COUNT tiles from TILES of TILE-KINDS."
@@ -190,6 +202,14 @@ TILE-KINDS is the list of tile kinds that can be spawned"
 
 ;;; ============================================================================
 
+(defconst *OBSTACLES* '(:cactus-single-big
+                        :cactus-single-small
+                        :cactus-double-small
+                        :cactus-double-big
+                        :cactus-cluster-small
+                        ;; :cactus-cluster-big
+                        ))
+
 (defmacro game-over? (game-state)
   "Is game over in GAME-STATE."
   `(eq (nth 6 ,game-state) :game-over))
@@ -231,7 +251,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
           (retro--load-background (asset "dino-horizon.sprite") *WIDTH* 0 0 (- *HEIGHT* 12 1)) ;1
           (retro--load-sprite (asset "dino-t-rex.sprite") *T-REX-X* *T-REX-GROUND-Y*) ;2
           (dino--spawn-initial-tiles tiles *CLOUD-MAX* *CLOUD-GAP* '(:cloud)) ; 3
-          (dino--spawn-initial-tiles tiles *CACTUS-MAX* *CACTUS-GAP* '(:cactus-single-big)) ; 4
+          (dino--spawn-initial-tiles tiles *CACTUS-MAX* *CACTUS-GAP* *OBSTACLES*) ; 4
           (retro--load-font (asset "dino.font")) ; 5
           :playing                ; 6
           tiles      ; 7
@@ -247,7 +267,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
     (retro--scroll-background (nth 1 game-state) (round (* *GROUND-VELOCITY* elapsed)))
     (t-rex-update (nth 2 game-state) elapsed)
     (setf (nth 3 game-state) (dino--update-tiles (nth 7 game-state) (nth 3 game-state) *CLOUD-MAX* *CLOUD-GAP* *CLOUD-VELOCITY* '(:cloud) elapsed))
-    (setf (nth 4 game-state) (dino--update-tiles (nth 7 game-state) (nth 4 game-state) *CACTUS-MAX* *CACTUS-GAP* *GROUND-VELOCITY* '(:cactus-single-big) elapsed))
+    (setf (nth 4 game-state) (dino--update-tiles (nth 7 game-state) (nth 4 game-state) *CACTUS-MAX* *CACTUS-GAP* *GROUND-VELOCITY* *OBSTACLES* elapsed))
     ;; collision detection
     (when (collision? (bb-sprite (nth 2 game-state))
                       (mapcar (lambda (obstacle)
