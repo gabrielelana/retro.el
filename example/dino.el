@@ -321,14 +321,14 @@ TILE-KINDS is the list of tile kinds that can be spawned"
                         "GAME OVER"
                         200 50 10 canvas)))
 
-(defun dino--toggle-pause (game-state _)
+(defun dino--command-toggle-pause (game-state _)
   "Pause the game in GAME-STATE."
   (cl-callf
       (lambda (game-status)
         (if (eq game-status :playing) :pause :playing))
       (nth 6 game-state)))
 
-(defun dino--jump-or-reset (game-state _)
+(defun dino--command-jump-or-reset (game-state _)
   "Make T-REX jump or reset GAME-STATE when game over."
   (cond ((game-over? game-state) (game-reset! game-state))
         ((game-paused? game-state) game-state)
@@ -340,10 +340,10 @@ TILE-KINDS is the list of tile kinds that can be spawned"
                      :resolution (cons *WIDTH* *HEIGHT*)
                      :background-color (ht-get retro-palette-colors->index "#ffffff")
                      :bind `(("q" . retro--handle-quit)
-                             ("p" . dino--toggle-pause)
-                             ("<up>" . dino--jump-or-reset)
+                             ("p" . dino--command-toggle-pause)
+                             ("<up>" . dino--command-jump-or-reset)
                              ("<down>" . (lambda (game-state _) (message "DOWN")))
-                             ("SPC" . dino--jump-or-reset))
+                             ("SPC" . dino--command-jump-or-reset))
                      :init 'dino-init
                      :update 'dino-update
                      :render 'dino-render))
