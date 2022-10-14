@@ -8,6 +8,7 @@
 
 (require 'retro (expand-file-name "./../retro.el"))
 (require 'retro-tween (expand-file-name "./../retro-tween.el"))
+(require 'cl-lib)
 
 ;;; ============================================================================
 ;;; Constants
@@ -222,13 +223,16 @@ TILE-KINDS is the list of tile kinds that can be spawned"
   "Is game over in GAME-STATE."
   `(eq (nth 6 ,game-state) :game-over))
 
+(defmacro game-paused? (game-state)
+  "Is game paused in GAME-STATE."
+  `(eq (nth 6 ,game-state) :pause))
+
 (defun game-over! (game-state)
   "Set GAME-STATE as game over."
   (setf (nth 6 game-state) :game-over)
   (setq t-rex-current-play "hit"
         t-rex-current-tween t-rex-hit-tween)
-  (retro--play-sprite (nth 2 game-state) "hit")
-  (message "GAME OVER"))
+  (retro--play-sprite (nth 2 game-state) "hit"))
 
 (defun game-reset! (game-state)
   "Reset GAME-STATE."
@@ -267,36 +271,38 @@ TILE-KINDS is the list of tile kinds that can be spawned"
 
 (defun dino-update (elapsed game-state _canvas)
   "Update GAME-STATE after ELAPSED."
-  (if (game-over? game-state)
-      (progn
-        (t-rex-update (nth 2 game-state) elapsed))
-    (when (eq (% (nth 0 game-state) 100) 0)
-      (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed))
-    (retro--scroll-background (nth 1 game-state) (round (* *GROUND-VELOCITY* elapsed)))
-    (t-rex-update (nth 2 game-state) elapsed)
-    (setf (nth 3 game-state) (dino--update-tiles (nth 7 game-state) (nth 3 game-state) *CLOUD-MAX* *CLOUD-GAP* *CLOUD-VELOCITY* '(:cloud) elapsed))
-    (setf (nth 4 game-state) (dino--update-tiles (nth 7 game-state) (nth 4 game-state) *CACTUS-MAX* *CACTUS-GAP* *GROUND-VELOCITY* *OBSTACLES* elapsed))
-    ;; collision detection
-    (when (collision? (bb-sprite (nth 2 game-state))
-                      (mapcar (lambda (obstacle)
-                                (let* ((obstacle-kind (car obstacle))
-                                       (obstacle-coordinates (cdr obstacle))
-                                       (obstacle (car (ht-get (nth 7 game-state) obstacle-kind)))
-                                       res)
-                                  (when (retro-tile-p obstacle)
-                                    (setq res (cons obstacle-coordinates
-                                                    (cons (+ (car obstacle-coordinates) (retro-tile-width obstacle))
-                                                          (+ (cdr obstacle-coordinates) (retro-tile-height obstacle))))))
-                                  (when (retro-sprite-p obstacle)
-                                    (setq res (cons obstacle-coordinates
-                                                    (cons (+ (car obstacle-coordinates) (retro-sprite-width obstacle))
-                                                          (+ (cdr obstacle-coordinates) (retro-sprite-height obstacle))))))
-                                  res))
-                              (nth 4 game-state)))
-      (game-over! game-state))
-    (when (funcall pterodactyl-tween elapsed)
-      (retro--next-frame-sprite (car (ht-get (nth 7 game-state) :pterodactyl))))
-    (cl-incf (car game-state))))
+  (cond ((game-over? game-state)
+         (t-rex-update (nth 2 game-state) elapsed))
+        ((game-paused? game-state)
+         game-state)
+        (t
+         (when (eq (% (nth 0 game-state) 100) 0)
+           (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed))
+         (retro--scroll-background (nth 1 game-state) (round (* *GROUND-VELOCITY* elapsed)))
+         (t-rex-update (nth 2 game-state) elapsed)
+         (setf (nth 3 game-state) (dino--update-tiles (nth 7 game-state) (nth 3 game-state) *CLOUD-MAX* *CLOUD-GAP* *CLOUD-VELOCITY* '(:cloud) elapsed))
+         (setf (nth 4 game-state) (dino--update-tiles (nth 7 game-state) (nth 4 game-state) *CACTUS-MAX* *CACTUS-GAP* *GROUND-VELOCITY* *OBSTACLES* elapsed))
+         ;; collision detection
+         (when (collision? (bb-sprite (nth 2 game-state))
+                           (mapcar (lambda (obstacle)
+                                     (let* ((obstacle-kind (car obstacle))
+                                            (obstacle-coordinates (cdr obstacle))
+                                            (obstacle (car (ht-get (nth 7 game-state) obstacle-kind)))
+                                            res)
+                                       (when (retro-tile-p obstacle)
+                                         (setq res (cons obstacle-coordinates
+                                                         (cons (+ (car obstacle-coordinates) (retro-tile-width obstacle))
+                                                               (+ (cdr obstacle-coordinates) (retro-tile-height obstacle))))))
+                                       (when (retro-sprite-p obstacle)
+                                         (setq res (cons obstacle-coordinates
+                                                         (cons (+ (car obstacle-coordinates) (retro-sprite-width obstacle))
+                                                               (+ (cdr obstacle-coordinates) (retro-sprite-height obstacle))))))
+                                       res))
+                                   (nth 4 game-state)))
+           (game-over! game-state))
+         (when (funcall pterodactyl-tween elapsed)
+           (retro--next-frame-sprite (car (ht-get (nth 7 game-state) :pterodactyl))))
+         (cl-incf (car game-state)))))
 
 (defun dino-render (_elapsed game-state canvas)
   "Render GAME-STATE on CANVAS."
@@ -315,12 +321,20 @@ TILE-KINDS is the list of tile kinds that can be spawned"
                         "GAME OVER"
                         200 50 10 canvas)))
 
+(defun dino--toggle-pause (game-state _)
+  "Pause the game in GAME-STATE."
+  (cl-callf
+      (lambda (game-status)
+        (if (eq game-status :playing) :pause :playing))
+      (nth 6 game-state)))
+
 (defun dino ()
   "Dino must avoid obstacles while running."
   (retro-game-create :name "dino"
                      :resolution (cons *WIDTH* *HEIGHT*)
                      :background-color (ht-get retro-palette-colors->index "#ffffff")
                      :bind `(("q" . retro--handle-quit)
+                             ("p" . dino--toggle-pause)
                              ("SPC" . (lambda (game-state _)
                                         (cond
                                          ((equal "running" t-rex-current-play)
