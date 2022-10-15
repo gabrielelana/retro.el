@@ -1,6 +1,6 @@
 #+TITLE: retro.el
 
-* RETRO-001 Dino running game [23/31]
+* RETRO-001 Dino running game [24/32]
 Implement "Dino running game" included in Chrome at ~chrome://dino/~
 
 Reference for constants, code and assets
@@ -35,11 +35,12 @@ Reference for constants, code and assets
 - [X] Add pterodactyls
 - [X] Add collision between pterodactyl and t-rex
 - [X] Pause game by pressing "p"
-- [ ] Jump higher
+- [X] Jump higher
 - [ ] Add dock animation for t-rex
 - [ ] Make the "speed" of the game a variable and calculate everything accordingly
 - [ ] Keep the highest score somewhere
 - [ ] Different probability of spawning obstacles
+- [ ] Try to keep tiles and sprites with their state ~cl-defstruct~ or ~cl-defclass cloud~
 - [ ] Prefix everything with ~dino--~
 - [ ] Start with ~offline~ || ~dino~ autoloaded command
 - [ ] Release as ~dino.el~

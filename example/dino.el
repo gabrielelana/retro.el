@@ -25,7 +25,7 @@
 
 (defconst *T-REX-X* 10)
 (defconst *T-REX-GROUND-Y* 101)
-(defconst *T-REX-TOP-Y* 40)
+(defconst *T-REX-TOP-Y* 20)
 
 (defvar t-rex-running-tween (tween-distinct-until-changed (tween-loop (tween 0.3 0 1 'linear))))
 (defvar t-rex-hit-tween (tween-distinct-until-changed (tween-loop (tween 0.5 0 1 'linear))))
