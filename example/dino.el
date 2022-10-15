@@ -17,7 +17,7 @@
 (defconst *SCORE-X* 430)
 (defconst *SCORE-Y* 20)
 (defconst *SCORE-TEXT* "HI %05d %05d")
-(defconst *GROUND-VELOCITY* 200)
+(defconst *GROUND-VELOCITY* 250)
 (defconst *ASSET-DIRECTORY* (file-name-as-directory (concat (file-name-directory (buffer-file-name)) "asset")))
 
 ;;; ============================================================================
