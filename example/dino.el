@@ -106,15 +106,14 @@ TILE (list tile-instance (min-y . gap-y) tile-width)"
         (cactus-double-big (retro--load-tile (asset "dino-cactus-double-big.sprite") 0 0))
         (cactus-cluster-small (retro--load-tile (asset "dino-cactus-cluster-small.sprite") 0 0))
         (cactus-cluster-big (retro--load-tile (asset "dino-cactus-cluster-big.sprite") 0 0))
-        (pterodactyl (retro--load-sprite (asset "dino-pterodactyl.sprite") 0 0))
-        )
+        (pterodactyl (retro--load-sprite (asset "dino-pterodactyl.sprite") 0 0)))
     (ht (:cloud (list cloud *CLOUD-Y* (retro-tile-width cloud)))
-        (:cactus-single-big (list cactus-single-big *CACTUS-Y* (retro-tile-width cactus-single-big)))
-        (:cactus-single-small (list cactus-single-small '(110 . 1) (retro-tile-width cactus-single-small)))
-        (:cactus-double-small (list cactus-double-small '(110 . 1) (retro-tile-width cactus-double-small)))
-        (:cactus-double-big (list cactus-double-big *CACTUS-Y* (retro-tile-width cactus-double-big)))
-        (:cactus-cluster-small (list cactus-cluster-small '(110 . 1) (retro-tile-width cactus-cluster-small)))
-        (:pterodactyl (list pterodactyl '(50 . 50) (retro-sprite-width pterodactyl))))))
+        (:cactus-single-big (list cactus-single-big *CACTUS-BIG-Y* (retro-tile-width cactus-single-big)))
+        (:cactus-single-small (list cactus-single-small *CACTUS-SMALL-Y* (retro-tile-width cactus-single-small)))
+        (:cactus-double-small (list cactus-double-small *CACTUS-SMALL-Y* (retro-tile-width cactus-double-small)))
+        (:cactus-double-big (list cactus-double-big *CACTUS-BIG-Y* (retro-tile-width cactus-double-big)))
+        (:cactus-cluster-small (list cactus-cluster-small *CACTUS-SMALL-Y* (retro-tile-width cactus-cluster-small)))
+        (:pterodactyl (list pterodactyl *PTERODACTYL-Y* (retro-sprite-width pterodactyl))))))
 
 (defun dino--spawn-initial-tiles (tiles tiles-count tile-x-gap tile-kinds)
   "Spawn initial TILES-COUNT tiles from TILES of TILE-KINDS."
@@ -204,11 +203,13 @@ TILE-KINDS is the list of tile kinds that can be spawned"
 (defconst *CLOUD-MAX* 6)
 
 ;;; ============================================================================
-;;; Cactus
+;;; Obstacles
 
-(defconst *CACTUS-MAX* 3)
-(defconst *CACTUS-GAP* '(180 . 320))
-(defconst *CACTUS-Y* '(100 . 1))
+(defconst *OBSTACLE-MAX* 3)
+(defconst *OBSTACLE-GAP* '(180 . 320))
+(defconst *CACTUS-BIG-Y* '(100 . 1))
+(defconst *CACTUS-SMALL-Y* '(110 . 1))
+(defconst *PTERODACTYL-Y* '(50 . 50))
 
 ;;; ============================================================================
 ;;; Collision detection
@@ -288,7 +289,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
           (retro--load-background (asset "dino-horizon.sprite") *WIDTH* 0 0 (- *HEIGHT* 12 1)) ; 1 -- background
           (retro--load-sprite (asset "dino-t-rex.sprite") *T-REX-X* *T-REX-GROUND-Y*) ; 2 -- t-rex
           (dino--spawn-initial-tiles tiles *CLOUD-MAX* *CLOUD-GAP* '(:cloud)) ; 3 -- clouds
-          (dino--spawn-initial-tiles tiles *CACTUS-MAX* *CACTUS-GAP* *OBSTACLES*) ; 4 -- obstacles
+          (dino--spawn-initial-tiles tiles *OBSTACLE-MAX* *OBSTACLE-GAP* *OBSTACLES*) ; 4 -- obstacles
           (retro--load-font (asset "dino.font")) ; 5 -- font
           :playing                ; 6 -- game status
           tiles      ; 7 -- loaded assets
@@ -306,7 +307,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
          (retro--scroll-background (nth 1 game-state) (round (* *GROUND-VELOCITY* elapsed)))
          (t-rex-update (nth 2 game-state) elapsed)
          (setf (nth 3 game-state) (dino--update-tiles (nth 7 game-state) (nth 3 game-state) *CLOUD-MAX* *CLOUD-GAP* *CLOUD-VELOCITY* '(:cloud) elapsed))
-         (setf (nth 4 game-state) (dino--update-tiles (nth 7 game-state) (nth 4 game-state) *CACTUS-MAX* *CACTUS-GAP* *GROUND-VELOCITY* *OBSTACLES* elapsed))
+         (setf (nth 4 game-state) (dino--update-tiles (nth 7 game-state) (nth 4 game-state) *OBSTACLE-MAX* *OBSTACLE-GAP* *GROUND-VELOCITY* *OBSTACLES* elapsed))
          ;; collision detection
          (when (collision? (bb-sprite (nth 2 game-state))
                            (mapcar (lambda (obstacle)
