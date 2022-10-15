@@ -26,40 +26,68 @@
 (defconst *T-REX-X* 10)
 (defconst *T-REX-GROUND-Y* 101)
 (defconst *T-REX-TOP-Y* 20)
+(defconst *T-REX-DUCKING-TIME* 1)
+(defconst *T-REX-DUCKING-GROUND-Y* 118)
 
 (defvar t-rex-running-tween (tween-distinct-until-changed (tween-loop (tween 0.3 0 1 'linear))))
 (defvar t-rex-hit-tween (tween-distinct-until-changed (tween-loop (tween 0.5 0 1 'linear))))
 (defvar t-rex-current-tween t-rex-running-tween)
 (defvar t-rex-current-play "running")
+(defvar t-rex-ducking-since 0)
 
 (defvar pterodactyl-tween (tween-distinct-until-changed (tween-loop (tween 0.3 0 1 'linear))))
 
-(defun t-rex-jump (sprite)
+(defun dino--t-rex-jump! (sprite)
+  "Switch t-rex SPRITE to jumping animation."
   (when (not (equal "jumping" t-rex-current-play))
     (setq t-rex-current-play "jumping"
           t-rex-current-tween (tween-concat (tween 0.3 *T-REX-GROUND-Y* *T-REX-TOP-Y* 'ease-out-cubic)
                                             (tween 0.3 *T-REX-TOP-Y* *T-REX-GROUND-Y* 'ease-in-cubic)))
     (retro--play-sprite sprite "jumping")))
 
+(defun dino--t-rex-run! (sprite)
+  "Switch t-rex SPRITE to running animation."
+  (setf (retro-sprite-y sprite) *T-REX-GROUND-Y*)
+  (setq t-rex-current-play "running"
+        t-rex-current-tween t-rex-running-tween)
+  (retro--play-sprite sprite "running"))
+
+(defun dino--t-rex-duck! (sprite)
+  "Switch t-rex SPRITE to ducking animation."
+  (setf (retro-sprite-y sprite) *T-REX-DUCKING-GROUND-Y*)
+  (setq t-rex-current-play "ducking"
+        t-rex-current-tween t-rex-running-tween
+        t-rex-ducking-since 0)
+  (retro--play-sprite sprite "ducking"))
+
+(defun dino--t-rex-hit! (sprite)
+  "Switch t-rex SPRITE to hit animation."
+  (setf (retro-sprite-y sprite) (min (retro-sprite-y sprite) *T-REX-GROUND-Y*))
+  (setq t-rex-current-play "hit"
+        t-rex-current-tween t-rex-hit-tween)
+  (retro--play-sprite sprite "hit"))
+
 (defun t-rex-update (sprite elapsed)
   "Update state of SPRITE t-rex after ELAPSED."
-  (let (y)
-    (cond
-     ((equal "jumping" t-rex-current-play)
-      (setq y (funcall t-rex-current-tween elapsed))
+  (cond
+   ((equal "jumping" t-rex-current-play)
+    (let ((y (funcall t-rex-current-tween elapsed)))
       (if (numberp y)
           (setf (retro-sprite-y sprite) y)
-        (setf (retro-sprite-y sprite) *T-REX-GROUND-Y*)
-        (setq t-rex-current-play "running"
-              t-rex-current-tween t-rex-running-tween)
-        (retro--play-sprite sprite "running")))
-     ((equal "running" t-rex-current-play)
+        (dino--t-rex-run! sprite))))
+   ((equal "running" t-rex-current-play)
+    (when (funcall t-rex-current-tween elapsed)
+      (retro--next-frame-sprite sprite)))
+   ((equal "ducking" t-rex-current-play)
+    (cl-incf t-rex-ducking-since elapsed)
+    (if (> t-rex-ducking-since *T-REX-DUCKING-TIME*)
+        (dino--t-rex-run! sprite)
       (when (funcall t-rex-current-tween elapsed)
-        (retro--next-frame-sprite sprite)))
-     ((equal "hit" t-rex-current-play)
-      (when (funcall t-rex-current-tween elapsed)
-        (retro--next-frame-sprite sprite)))
-     (t (error "Unreachable")))))
+        (retro--next-frame-sprite sprite))))
+   ((equal "hit" t-rex-current-play)
+    (when (funcall t-rex-current-tween elapsed)
+      (retro--next-frame-sprite sprite)))
+   (t (error "Unreachable"))))
 
 (defun t-rex-render (sprite canvas)
   (retro--plot-sprite sprite canvas))
@@ -229,10 +257,8 @@ TILE-KINDS is the list of tile kinds that can be spawned"
 
 (defun game-over! (game-state)
   "Set GAME-STATE as game over."
-  (setf (nth 6 game-state) :game-over)
-  (setq t-rex-current-play "hit"
-        t-rex-current-tween t-rex-hit-tween)
-  (retro--play-sprite (nth 2 game-state) "hit"))
+  (dino--t-rex-hit! (nth 2 game-state))
+  (setf (nth 6 game-state) :game-over))
 
 (defun game-reset! (game-state)
   "Reset GAME-STATE."
@@ -247,8 +273,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
      (nth 4 game-state) (nth 4 initial-state)
      (nth 5 game-state) (nth 5 initial-state)
      (nth 6 game-state) (nth 6 initial-state)
-     (nth 7 game-state) (nth 7 initial-state)
-     )))
+     (nth 7 game-state) (nth 7 initial-state))))
 
 (defmacro asset (file-name)
   "Absolute file path of asset FILE-NAME."
@@ -323,16 +348,22 @@ TILE-KINDS is the list of tile kinds that can be spawned"
 
 (defun dino--command-toggle-pause (game-state _)
   "Pause the game in GAME-STATE."
-  (cl-callf
-      (lambda (game-status)
-        (if (eq game-status :playing) :pause :playing))
-      (nth 6 game-state)))
+  (when (not (game-over? game-state))
+    (cl-callf
+        (lambda (game-status)
+          (if (eq game-status :playing) :pause :playing))
+        (nth 6 game-state))))
 
 (defun dino--command-jump-or-reset (game-state _)
   "Make T-REX jump or reset GAME-STATE when game over."
   (cond ((game-over? game-state) (game-reset! game-state))
         ((game-paused? game-state) game-state)
-        (t (t-rex-jump (nth 2 game-state)))))
+        (t (dino--t-rex-jump! (nth 2 game-state)))))
+
+(defun dino--command-duck (game-state _)
+  "Make T-REX duck in GAME-STATE."
+  (when (not (game-over? game-state))
+    (dino--t-rex-duck! (nth 2 game-state))))
 
 (defun dino ()
   "Dino must avoid obstacles while running."
@@ -342,7 +373,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
                      :bind `(("q" . retro--handle-quit)
                              ("p" . dino--command-toggle-pause)
                              ("<up>" . dino--command-jump-or-reset)
-                             ("<down>" . (lambda (game-state _) (message "DOWN")))
+                             ("<down>" . dino--command-duck)
                              ("SPC" . dino--command-jump-or-reset))
                      :init 'dino-init
                      :update 'dino-update
