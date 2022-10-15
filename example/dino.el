@@ -90,6 +90,7 @@
    (t (error "Unreachable"))))
 
 (defun t-rex-render (sprite canvas)
+  "Render t-rex SPRITE on CANVAS."
   (retro--plot-sprite sprite canvas))
 
 ;;; ============================================================================
