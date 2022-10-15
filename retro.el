@@ -198,6 +198,7 @@ BACKGROUND-COLOR is the background color."
                   inhibit-compacting-font-caches t
                   bidi-inhibit-bpa t
                   bidi-display-reordering nil
+                  bidi-paragraph-direction 'left-to-right
                   buffer-read-only nil
                   mode-line-format nil)
       (erase-buffer)
