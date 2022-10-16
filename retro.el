@@ -808,6 +808,12 @@ Colors should be specified as RGB hex string (ex. \"0xffffff\")
 
 ;;; Game
 
+(defun retro--noop (game-state game)
+  "Does nothing with GAME-STATE and GAME."
+  game-state
+  game
+  nil)
+
 (cl-defstruct (retro-game (:constructor retro-game--create)
                           (:copier nil))
   "Game."
@@ -816,15 +822,17 @@ Colors should be specified as RGB hex string (ex. \"0xffffff\")
   (resolution nil :type cons)
   (bind nil :type list)
   (init nil :type function)
+  (after-init nil :type function)
   (update nil :type function)
   (render nil :type function)
   (quit-p nil :type boolean)
   (quit nil :type function)
+  (before-quit nil :type function)
   (pending-events () :type list)
   (current-canvas nil :type canvas)
   (previous-canvas nil :type canvas))
 
-(cl-defun retro-game-create (&key name resolution bind init update render (background-color 0))
+(cl-defun retro-game-create (&key name resolution bind init update render (after-init 'retro--noop) (before-quit 'retro--noop) (background-color 0))
   "Create GAME."
   (let* ((original-buffer (current-buffer))
          (buffer-name (format "*%s-screen*" name))
@@ -838,9 +846,11 @@ Colors should be specified as RGB hex string (ex. \"0xffffff\")
                                    :resolution resolution
                                    :bind bind
                                    :init init
+                                   :after-init after-init
                                    :update update
                                    :render render
                                    :quit-p nil
+                                   :before-quit before-quit
                                    :quit (lambda () (switch-to-buffer original-buffer))
                                    :pending-events '()
                                    :current-canvas current-canvas
@@ -953,12 +963,14 @@ To do that wrap your update function with this function like
 ;; the game struct
 (defun retro--game-loop (game &optional game-state last-time)
   "Game loop."
-  (let* ((game-state (or game-state (funcall (retro-game-init game))))
-         (last-time (or last-time (current-time)))
+  (let* ((last-time (or last-time (current-time)))
          (now (current-time))
          (elapsed (float-time (time-subtract now last-time)))
          (current-canvas (retro-game-current-canvas game))
          (previous-canvas (retro-game-previous-canvas game)))
+    (when (not game-state)
+      (setq game-state (funcall (retro-game-init game)))
+      (funcall (retro-game-after-init game) game-state game))
     (retro--handle-pending-events game-state game)
     (funcall (retro-game-update game) elapsed game-state current-canvas)
     (funcall (retro-game-render game) elapsed game-state current-canvas)
@@ -967,7 +979,9 @@ To do that wrap your update function with this function like
     (retro--reset-canvas previous-canvas)
     (cl-rotatef (retro-game-current-canvas game) (retro-game-previous-canvas game))
     (if (retro-game-quit-p game)
-        (funcall (retro-game-quit game))
+        (progn
+          (funcall (retro-game-before-quit game) game-state game)
+          (funcall (retro-game-quit game)))
       (redisplay t)
       (run-with-timer 0.001 nil 'retro--game-loop game game-state now)
       (garbage-collect-maybe 4)
