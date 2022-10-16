@@ -18,12 +18,15 @@
 (defconst *SCORE-Y* 20)
 (defconst *SCORE-TEXT* "HI %05d %05d")
 (defconst *ASSET-DIRECTORY* (file-name-as-directory (concat (file-name-directory (buffer-file-name)) "asset")))
+(defconst *DINO--HIGHEST-SCORE-FILE* (concat user-emacs-directory ".dino-highest-score"))
 
 (defconst *DINO--DIFFICULTY-DELTA* 0.05)
 (defconst *DINO--DEFAULT-DIFFICULTY-LEVEL* 1)
 (defconst *DINO--DEFAULT-GROUND-VELOCITY* 250)
 (defconst *DINO--DEFAULT-CLOUD-VELOCITY* 100)
 (defconst *DINO--DEFAULT-OBSTACLES-GAP* '(180 . 320))
+
+(defvar dino--highest-score 0)
 
 (defvar dino--difficulty-level *DINO--DEFAULT-DIFFICULTY-LEVEL*)
 (defvar dino--ground-velociy *DINO--DEFAULT-GROUND-VELOCITY*)
@@ -273,6 +276,8 @@ TILE-KINDS is the list of tile kinds that can be spawned"
 (defun game-over! (game-state)
   "Set GAME-STATE as game over."
   (dino--t-rex-hit! (nth 2 game-state))
+  (when (> (nth 0 game-state) dino--highest-score)
+    (setq dino--highest-score (nth 0 game-state)))
   (setf (nth 6 game-state) :game-over))
 
 (defun game-reset! (game-state)
@@ -359,7 +364,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
   (dino--render-tiles (nth 7 game-state) (nth 3 game-state) canvas)
   (dino--render-tiles (nth 7 game-state) (nth 4 game-state) canvas)
   (retro--plot-string (nth 5 game-state)
-                      (format *SCORE-TEXT* 0 (nth 0 game-state))
+                      (format *SCORE-TEXT* dino--highest-score (nth 0 game-state))
                       *SCORE-X*
                       *SCORE-Y*
                       2
@@ -391,11 +396,16 @@ TILE-KINDS is the list of tile kinds that can be spawned"
 
 (defun dino--handle-after-init (game-state _)
   "Handle after init with GAME-STATE."
-  (message "AFTER INIT"))
+  (when (not (file-exists-p *DINO--HIGHEST-SCORE-FILE*))
+    (write-region "0" nil *DINO--HIGHEST-SCORE-FILE*))
+  (setq dino--highest-score (string-to-number
+                             (with-temp-buffer
+                               (insert-file-contents *DINO--HIGHEST-SCORE-FILE*)
+                               (buffer-string)))))
 
 (defun dino--handle-before-quit (game-state _)
   "Handle before quit with GAME-STATE."
-  (message "BEFORE QUIT"))
+  (write-region (number-to-string dino--highest-score) nil *DINO--HIGHEST-SCORE-FILE*))
 
 (defun dino ()
   "Dino must avoid obstacles while running."
