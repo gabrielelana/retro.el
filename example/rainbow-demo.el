@@ -11,7 +11,8 @@
                              ("q" . retro--handle-quit))
                      :init (lambda () (list 0))
                      :update (lambda (elapsed game-state _canvas)
-                               (message "[%03d] elapsed: %fs" (car game-state) elapsed)
+                               (when (eq (% (nth 0 game-state) 100) 0)
+                                 (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed))
                                (setf (car game-state) (1+ (car game-state))))
                      :render (lambda (_elapsed game-state canvas)
                                (retro--plot-filled-rectangle 1 1
