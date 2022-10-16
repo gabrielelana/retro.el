@@ -42,7 +42,7 @@ Reference for constants, code and assets
 - [ ] Toggle collision detection with "c"
 - [ ] Toggle drawing bounding box with "d"
 - [ ] Different probability of spawning obstacles
-- [ ] Try to keep tiles and sprites with their state ~cl-defstruct~ or ~cl-defclass cloud~
+- [ ] Try to keep tiles and sprites with their state with ~cl-defstruct~ or ~cl-defclass~
 - [ ] Prefix everything with ~dino--~
 - [ ] Start with ~offline~ || ~dino~ autoloaded command
 - [ ] Release as ~dino.el~
