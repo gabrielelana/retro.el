@@ -17,15 +17,44 @@
 (defconst *SCORE-X* 430)
 (defconst *SCORE-Y* 20)
 (defconst *SCORE-TEXT* "HI %05d %05d")
-(defconst *GROUND-VELOCITY* 250)
 (defconst *ASSET-DIRECTORY* (file-name-as-directory (concat (file-name-directory (buffer-file-name)) "asset")))
+
+(defconst *DINO--DIFFICULTY-DELTA* 0.05)
+(defconst *DINO--DEFAULT-DIFFICULTY-LEVEL* 1)
+(defconst *DINO--DEFAULT-GROUND-VELOCITY* 250)
+(defconst *DINO--DEFAULT-CLOUD-VELOCITY* 100)
+(defconst *DINO--DEFAULT-OBSTACLES-GAP* '(180 . 320))
+
+(defvar dino--difficulty-level *DINO--DEFAULT-DIFFICULTY-LEVEL*)
+(defvar dino--ground-velociy *DINO--DEFAULT-GROUND-VELOCITY*)
+(defvar dino--cloud-velociy *DINO--DEFAULT-CLOUD-VELOCITY*)
+(defvar dino--obstacles-gap (copy-tree *DINO--DEFAULT-OBSTACLES-GAP*))
+
+(defmacro asset (file-name)
+  "Absolute file path of asset FILE-NAME."
+  `(concat ,*ASSET-DIRECTORY* ,file-name))
+
+;;; ============================================================================
+;;; Clouds
+
+(defconst *CLOUD-Y* '(10 . 100))
+(defconst *CLOUD-GAP* '(100 . 300))
+(defconst *CLOUD-MAX* 6)
+
+;;; ============================================================================
+;;; Obstacles
+
+(defconst *OBSTACLE-MAX* 3)
+(defconst *CACTUS-BIG-Y* '(100 . 1))
+(defconst *CACTUS-SMALL-Y* '(110 . 1))
+(defconst *PTERODACTYL-Y* '(50 . 50))
 
 ;;; ============================================================================
 ;;; T-Rex
 
 (defconst *T-REX-X* 10)
-(defconst *T-REX-GROUND-Y* 101)
 (defconst *T-REX-TOP-Y* 20)
+(defconst *T-REX-GROUND-Y* 101)
 (defconst *T-REX-DUCKING-TIME* 1)
 (defconst *T-REX-DUCKING-GROUND-Y* 118)
 
@@ -114,6 +143,7 @@ TILE (list tile-instance (min-y . gap-y) tile-width)"
         (:cactus-double-small (list cactus-double-small *CACTUS-SMALL-Y* (retro-tile-width cactus-double-small)))
         (:cactus-double-big (list cactus-double-big *CACTUS-BIG-Y* (retro-tile-width cactus-double-big)))
         (:cactus-cluster-small (list cactus-cluster-small *CACTUS-SMALL-Y* (retro-tile-width cactus-cluster-small)))
+        (:cactus-cluster-big (list cactus-cluster-big *CACTUS-BIG-Y* (retro-tile-width cactus-cluster-big)))
         (:pterodactyl (list pterodactyl *PTERODACTYL-Y* (retro-sprite-width pterodactyl))))))
 
 (defun dino--spawn-initial-tiles (tiles tiles-count tile-x-gap tile-kinds)
@@ -145,7 +175,7 @@ SPAWNED-TILES is (list (cons tile-kind tile-coordinates))
 
 TILE-X-GAP is (cons min-x-gap max-x-gap)
 TILE-KINDS is the kind of tiles that can be spawn"
-  (let ((last-tile (cdar (last spawned-tiles))) x)
+  (let ((last-tile (cdar (last spawned-tiles))) x tile-kind new-tile)
     (while (< (length spawned-tiles) tiles-count)
       (setq x (+ (car last-tile) (car tile-x-gap) (random (cdr tile-x-gap)))
             tile-kind (nth (random (seq-length tile-kinds)) tile-kinds)
@@ -194,23 +224,6 @@ TILE-KINDS is the list of tile kinds that can be spawned"
                                 (setf (cadr spawned-tile) (- (cadr spawned-tile) (round (* tile-velocity elapsed))))
                                 spawned-tile)
                               spawned-tiles)))
-
-;;; ============================================================================
-;;; Clouds
-
-(defconst *CLOUD-Y* '(10 . 100))
-(defconst *CLOUD-GAP* '(100 . 300))
-(defconst *CLOUD-VELOCITY* 100.0)  ; pixels per second
-(defconst *CLOUD-MAX* 6)
-
-;;; ============================================================================
-;;; Obstacles
-
-(defconst *OBSTACLE-MAX* 3)
-(defconst *OBSTACLE-GAP* '(180 . 320))
-(defconst *CACTUS-BIG-Y* '(100 . 1))
-(defconst *CACTUS-SMALL-Y* '(110 . 1))
-(defconst *PTERODACTYL-Y* '(50 . 50))
 
 ;;; ============================================================================
 ;;; Collision detection
@@ -264,8 +277,6 @@ TILE-KINDS is the list of tile kinds that can be spawned"
 
 (defun game-reset! (game-state)
   "Reset GAME-STATE."
-  (setq t-rex-current-play "running")
-  (setq t-rex-current-tween t-rex-running-tween)
   (let ((initial-state (dino-init)))
     (setf
      (nth 0 game-state) (nth 0 initial-state)
@@ -277,20 +288,30 @@ TILE-KINDS is the list of tile kinds that can be spawned"
      (nth 6 game-state) (nth 6 initial-state)
      (nth 7 game-state) (nth 7 initial-state))))
 
-(defmacro asset (file-name)
-  "Absolute file path of asset FILE-NAME."
-  `(concat ,*ASSET-DIRECTORY* ,file-name))
+(defun dino--increase-difficulty-level (delta)
+  "Increase current difficulty level by DELTA."
+  (let ((gap-coefficient (1+ (/ (1- dino--difficulty-level) 5.0))))
+    (setq dino--difficulty-level (+ dino--difficulty-level delta)
+          dino--ground-velociy (round (* *DINO--DEFAULT-GROUND-VELOCITY* dino--difficulty-level))
+          dino--cloud-velociy (round (* *DINO--DEFAULT-CLOUD-VELOCITY* dino--difficulty-level))
+          dino--obstacles-gap (cons (round (* (car *DINO--DEFAULT-OBSTACLES-GAP*) gap-coefficient))
+                                    (round (* (cdr *DINO--DEFAULT-OBSTACLES-GAP*) gap-coefficient)))
+          t-rex-runningx-tween (tween-distinct-until-changed (tween-loop (tween (/ 0.3 dino--difficulty-level) 0 1 'linear))))))
 
 (defun dino-init ()
   "Init game-state."
-  (setq t-rex-current-play "running")
-  (setq t-rex-current-tween t-rex-running-tween)
+  (setq t-rex-current-play "running"
+        t-rex-current-tween t-rex-running-tween
+        dino--difficulty-level *DINO--DEFAULT-DIFFICULTY-LEVEL*
+        dino--ground-velociy *DINO--DEFAULT-GROUND-VELOCITY*
+        dino--cloud-velociy *DINO--DEFAULT-CLOUD-VELOCITY*
+        dino--obstacles-gap *DINO--DEFAULT-OBSTACLES-GAP*)
   (let ((tiles (dino--load-tiles)))
     (list 0                       ; 0 - game counter
           (retro--load-background (asset "dino-horizon.sprite") *WIDTH* 0 0 (- *HEIGHT* 12 1)) ; 1 -- background
           (retro--load-sprite (asset "dino-t-rex.sprite") *T-REX-X* *T-REX-GROUND-Y*) ; 2 -- t-rex
           (dino--spawn-initial-tiles tiles *CLOUD-MAX* *CLOUD-GAP* '(:cloud)) ; 3 -- clouds
-          (dino--spawn-initial-tiles tiles *OBSTACLE-MAX* *OBSTACLE-GAP* *OBSTACLES*) ; 4 -- obstacles
+          (dino--spawn-initial-tiles tiles *OBSTACLE-MAX* dino--obstacles-gap *OBSTACLES*) ; 4 -- obstacles
           (retro--load-font (asset "dino.font")) ; 5 -- font
           :playing                ; 6 -- game status
           tiles      ; 7 -- loaded assets
@@ -304,11 +325,12 @@ TILE-KINDS is the list of tile kinds that can be spawned"
          game-state)
         (t
          (when (eq (% (nth 0 game-state) 100) 0)
+           (dino--increase-difficulty-level *DINO--DIFFICULTY-DELTA*)
            (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed))
-         (retro--scroll-background (nth 1 game-state) (round (* *GROUND-VELOCITY* elapsed)))
+         (retro--scroll-background (nth 1 game-state) (round (* dino--ground-velociy elapsed)))
          (t-rex-update (nth 2 game-state) elapsed)
-         (setf (nth 3 game-state) (dino--update-tiles (nth 7 game-state) (nth 3 game-state) *CLOUD-MAX* *CLOUD-GAP* *CLOUD-VELOCITY* '(:cloud) elapsed))
-         (setf (nth 4 game-state) (dino--update-tiles (nth 7 game-state) (nth 4 game-state) *OBSTACLE-MAX* *OBSTACLE-GAP* *GROUND-VELOCITY* *OBSTACLES* elapsed))
+         (setf (nth 3 game-state) (dino--update-tiles (nth 7 game-state) (nth 3 game-state) *CLOUD-MAX* *CLOUD-GAP* dino--cloud-velociy '(:cloud) elapsed))
+         (setf (nth 4 game-state) (dino--update-tiles (nth 7 game-state) (nth 4 game-state) *OBSTACLE-MAX* dino--obstacles-gap dino--ground-velociy *OBSTACLES* elapsed))
          ;; collision detection
          (when (collision? (bb-sprite (nth 2 game-state))
                            (mapcar (lambda (obstacle)
@@ -367,6 +389,14 @@ TILE-KINDS is the list of tile kinds that can be spawned"
   (when (not (game-over? game-state))
     (dino--t-rex-duck! (nth 2 game-state))))
 
+(defun dino--handle-after-init (game-state _)
+  "Handle after init with GAME-STATE."
+  (message "AFTER INIT"))
+
+(defun dino--handle-before-quit (game-state _)
+  "Handle before quit with GAME-STATE."
+  (message "BEFORE QUIT"))
+
 (defun dino ()
   "Dino must avoid obstacles while running."
   (retro-game-create :name "dino"
@@ -377,6 +407,8 @@ TILE-KINDS is the list of tile kinds that can be spawned"
                              ("<up>" . dino--command-jump-or-reset)
                              ("<down>" . dino--command-duck)
                              ("SPC" . dino--command-jump-or-reset))
+                     :after-init 'dino--handle-after-init
+                     :before-quit 'dino--handle-before-quit
                      :init 'dino-init
                      :update 'dino-update
                      :render 'dino-render))
