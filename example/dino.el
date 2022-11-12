@@ -231,28 +231,31 @@ TILE-KINDS is the list of tile kinds that can be spawned"
 ;;; ============================================================================
 ;;; Collision detection
 
-(defmacro bb-left (bb) `(caar ,bb))
-(defmacro bb-right (bb) `(cadr ,bb))
-(defmacro bb-top (bb) `(cdar ,bb))
-(defmacro bb-bottom (bb) `(cddr ,bb))
-
-(defmacro bb-sprite (sprite) `(cons (cons (retro-sprite-x ,sprite)
-                                          (retro-sprite-y ,sprite))
-                                    (cons (+ (retro-sprite-x ,sprite) (retro-sprite-width ,sprite))
-                                          (+ (retro-sprite-y ,sprite) (retro-sprite-height ,sprite)))))
-
-(defun bb-intersect? (bbl bbr)
-  "Check intersection between bounding boxes BBL and BBR."
-  (and (< (bb-left bbl) (bb-right bbr))
-       (> (bb-right bbl) (bb-left bbr))
-       (< (bb-top bbl) (bb-bottom bbr))
-       (> (bb-bottom bbl) (bb-top bbr))))
-
-(defun collision? (t-rex-bb tiles-bb)
-  "Detect collision between T-REX-BB and TILES-BB."
-  (->> tiles-bb
-       (seq-filter (lambda (tile-bb) (<= (bb-left tile-bb) (bb-left t-rex-bb))))
-       (seq-some (lambda (tile-bb) (bb-intersect? t-rex-bb tile-bb)))))
+(defun collision? (t-rex obstacles obstacles-assets)
+  "Collision between T-REX and OBSTACLES for OBSTACLES-ASSETS."
+  (let ((t-rex-bb (retro-bb-sprite t-rex))
+        (t-rex-frame (retro-sprite-frame t-rex)))
+    (seq-some (lambda (obstacle)
+                (let* ((obstacle-kind (car obstacle))
+                       (obstacle-coordinates (cdr obstacle))
+                       (obstacle-asset (car (ht-get obstacles-assets obstacle-kind)))
+                       obstacle-bb
+                       obstacle-frame)
+                  (when (retro-tile-p obstacle-asset)
+                    (setq obstacle-bb (cons obstacle-coordinates
+                                            (cons (1- (+ (car obstacle-coordinates) (retro-tile-width obstacle-asset)))
+                                                  (1- (+ (cdr obstacle-coordinates) (retro-tile-height obstacle-asset)))))
+                          obstacle-frame (retro-tile-pixels obstacle-asset)))
+                  (when (retro-sprite-p obstacle-asset)
+                    (setq obstacle-bb (cons obstacle-coordinates
+                                            (cons (1- (+ (car obstacle-coordinates) (retro-sprite-width obstacle-asset)))
+                                                  (1- (+ (cdr obstacle-coordinates) (retro-sprite-height obstacle-asset)))))
+                          obstacle-frame (retro-sprite-frame obstacle-asset)))
+                  (and (>= (retro-bb-right t-rex-bb) (retro-bb-left obstacle-bb))
+                       (retro-bb-intersect? t-rex-bb obstacle-bb)
+                       (retro-pp-intersect? t-rex-frame t-rex-bb 0 obstacle-frame obstacle-bb 0)
+                       )))
+              obstacles)))
 
 ;;; ============================================================================
 
@@ -337,22 +340,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
          (setf (nth 3 game-state) (dino--update-tiles (nth 7 game-state) (nth 3 game-state) *CLOUD-MAX* *CLOUD-GAP* dino--cloud-velociy '(:cloud) elapsed))
          (setf (nth 4 game-state) (dino--update-tiles (nth 7 game-state) (nth 4 game-state) *OBSTACLE-MAX* dino--obstacles-gap dino--ground-velociy *OBSTACLES* elapsed))
          ;; collision detection
-         (when (collision? (bb-sprite (nth 2 game-state))
-                           (mapcar (lambda (obstacle)
-                                     (let* ((obstacle-kind (car obstacle))
-                                            (obstacle-coordinates (cdr obstacle))
-                                            (obstacle (car (ht-get (nth 7 game-state) obstacle-kind)))
-                                            res)
-                                       (when (retro-tile-p obstacle)
-                                         (setq res (cons obstacle-coordinates
-                                                         (cons (+ (car obstacle-coordinates) (retro-tile-width obstacle))
-                                                               (+ (cdr obstacle-coordinates) (retro-tile-height obstacle))))))
-                                       (when (retro-sprite-p obstacle)
-                                         (setq res (cons obstacle-coordinates
-                                                         (cons (+ (car obstacle-coordinates) (retro-sprite-width obstacle))
-                                                               (+ (cdr obstacle-coordinates) (retro-sprite-height obstacle))))))
-                                       res))
-                                   (nth 4 game-state)))
+         (when (collision? (nth 2 game-state) (nth 4 game-state) (nth 7 game-state))
            (game-over! game-state))
          (when (funcall pterodactyl-tween elapsed)
            (retro--next-frame-sprite (car (ht-get (nth 7 game-state) :pterodactyl))))

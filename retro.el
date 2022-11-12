@@ -127,7 +127,7 @@
   "Return optimal size of pixel in WINDOW for canvas WIDTH x HEIGHT.
 
 We want to calculate the size in pixel of a single character
-coming from 'retro-square-font-family (a pixel of our canvas) so
+coming from `retro-square-font-family (a pixel of our canvas) so
 that we will minimize the margin of the canvas with the wanted
 resolution in WINDOW."
   (let* ((min-pixel-size 1)
@@ -293,7 +293,7 @@ this color is not copied."
 ;;; TODO: check file format
 ;;; TODO: documentation
 (defun retro--load-tile (file-path &optional x y)
-  "Load a TILE from FILE-PATH."
+  "Load a TILE from FILE-PATH at (X, Y) or (0, 0)."
   (with-temp-buffer
     (insert-file-contents file-path)
     (goto-char (point-min))
@@ -1104,6 +1104,136 @@ To do that wrap your update function with this function like
   (aset pixels (+ (* y width) x) color))
 
 
+
+;;; Collision detection
+
+(defmacro retro-bb-left (bb)
+  "Get coordinate x of top left corner of BB."
+  `(caar ,bb))
+
+(defmacro retro-bb-right (bb)
+  "Get coordinate x of bottom right corner of BB."
+  `(cadr ,bb))
+
+(defmacro retro-bb-top (bb)
+  "Get coordinate y of top left corner of BB."
+  `(cdar ,bb))
+
+(defmacro retro-bb-bottom (bb)
+  "Get coordinate y of bottom left corner of BB."
+  `(cddr ,bb))
+
+(defmacro retro-bb-width (bb)
+  "Get width of BB."
+  `(1+ (- (retro-bb-right ,bb) (retro-bb-left ,bb))))
+
+(defmacro retro-bb-height (bb)
+  "Get height of BB."
+  `(1+ (- (retro-bb-bottom ,bb) (retro-bb-top ,bb))))
+
+(defmacro retro-bb-length (bb)
+  "Get length of BB."
+  `(* (retro-bb-width ,bb) (retro-bb-height ,bb)))
+
+(defmacro retro-bb-sprite (sprite)
+  "Get bounding box from SPRITE.
+
+If a sprite has the following pixels (`x`), the bounding box is
+represented as the `(cons x y)` coordinates of the top left
+corner (`1`) and the bottom right corner (`2`).
+
+So, if the point 1 has coordinates `(cons ,x1 ,y1) and point 2
+has coordinates `(cons ,x2 ,y2), the bounding box of the sprite
+is `(cons (cons ,x1 ,y1) (cons ,x2 ,y2)).
+
+1..x..
+.xxxxx
+xxx...
+x....2"
+  `(cons (cons (retro-sprite-x ,sprite)
+               (retro-sprite-y ,sprite))
+         (cons (1- (+ (retro-sprite-x ,sprite) (retro-sprite-width ,sprite)))
+               (1- (+ (retro-sprite-y ,sprite) (retro-sprite-height ,sprite))))))
+
+(defun retro-bb-intersect? (bbl bbr)
+  "Check if bounding box BBL and bounding box BBR intersect."
+  (and (<= (retro-bb-left bbl) (retro-bb-right bbr))
+       (>= (retro-bb-right bbl) (retro-bb-left bbr))
+       (<= (retro-bb-top bbl) (retro-bb-bottom bbr))
+       (>= (retro-bb-bottom bbl) (retro-bb-top bbr))))
+
+(defun retro-bb-intersetion (bbl bbr)
+  "Calculate bounding box intersection between BBL and BBR."
+  ;; Naive implementation
+  ;; (when (retro-bb-intersect? bbl bbr)
+  ;;   (cons (cons (max (retro-bb-left bbl) (retro-bb-left bbr))
+  ;;               (max (retro-bb-top bbl) (retro-bb-top bbr)))
+  ;;         (cons (min (retro-bb-right bbl) (retro-bb-right bbr))
+  ;;               (min (retro-bb-bottom bbl) (retro-bb-bottom bbr)))))
+  (cl-destructuring-bind
+      (((xl1 . yl1) xl2 . yl2) (xr1 . yr1) xr2 . yr2)
+      (cons bbl bbr)
+    (let ((x1 (max xl1 xr1))
+          (y1 (max yl1 yr1))
+          (x2 (min xl2 xr2))
+          (y2 (min yl2 yr2)))
+      (if (or (> x1 x2) (> y1 y2))
+          nil
+        (cons (cons x1 y1) (cons x2 y2))))))
+
+(defun retro-canvas-bb-clip (canvas canvas-bb bb)
+  "Clip canvas.
+
+Clip the CANVAS which has a bounding box CANVAS-BB with a
+bounding box BB.
+
+The bounding box BB is supposed to be completely contained in
+canvas's boundig box CANVANS-BB."
+  (let* ((x-index-start (- (retro-bb-left bb) (retro-bb-left canvas-bb)))
+         (y-index-start (- (retro-bb-top bb) (retro-bb-top canvas-bb)))
+         (x-index x-index-start)
+         (y-index y-index-start)
+         (bb-width (1- (retro-bb-width bb)))
+         (bb-length (retro-bb-length bb))
+         (canvas-width (retro-bb-width canvas-bb))
+         (r (make-vector bb-length 0))
+         (r-index 0))
+    (while (< r-index bb-length)
+      (aset r r-index (aref canvas (+ (* y-index canvas-width) x-index)))
+      (if (>= (- x-index x-index-start) bb-width)
+          (setq x-index x-index-start
+                y-index (1+ y-index)
+                r-index (1+ r-index))
+        (setq x-index (1+ x-index)
+              r-index (1+ r-index))))
+    r))
+
+(defun retro-pp-intersect? (cl cl-bb cl-tc cr cr-bb cr-tc)
+  "Pixel perfect collision detection between canvas.
+
+- CL left canvas
+- CL-BB left canvas's bounding box
+- CL-TC left canvas's transparent color
+- CR right canvas
+- CR-BB right canvas's bounding box
+- CR-TC right canvas's transparent color"
+  (let ((bb (retro-bb-intersetion cl-bb cr-bb)))
+    (when bb
+      (let ((pl (retro-canvas-bb-clip cl cl-bb bb))
+            (pr (retro-canvas-bb-clip cr cr-bb bb))
+            (cl-p nil)
+            (cr-p nil)
+            (width (retro-bb-width bb))
+            (index 0)
+            (collide nil))
+        (while (and (not collide) (< index width))
+          (setq cl-p (aref pl index)
+                cr-p (aref pr index)
+                collide (and (not (eq cl-tc cl-p))
+                             (not (eq cr-tc cr-p)))
+                index (1+ index)))
+        collide))))
+
 ;; (retro-game "gol"
 ;;   :init gol-init
 ;;   :resolution (320 . 280)
@@ -1139,7 +1269,6 @@ To do that wrap your update function with this function like
 ;;         (retro--buffer-render current-canvas previous-canvas)
 ;;         (sit-for 1)
 ;;         ))))
-
 
 (provide 'retro)
 
