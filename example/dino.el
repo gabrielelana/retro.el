@@ -58,7 +58,7 @@
 (defconst *T-REX-X* 10)
 (defconst *T-REX-TOP-Y* 20)
 (defconst *T-REX-GROUND-Y* 101)
-(defconst *T-REX-DUCKING-TIME* 1)
+(defconst *T-REX-DUCKING-TIME* 0.2)
 (defconst *T-REX-DUCKING-GROUND-Y* 118)
 
 (defvar t-rex-running-tween (tween-distinct-until-changed (tween-loop (tween 0.3 0 1 'linear))))
