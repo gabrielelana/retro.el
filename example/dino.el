@@ -86,11 +86,12 @@
 
 (defun dino--t-rex-duck! (sprite)
   "Switch t-rex SPRITE to ducking animation."
-  (setf (retro-sprite-y sprite) *T-REX-DUCKING-GROUND-Y*)
-  (setq t-rex-current-play "ducking"
-        t-rex-current-tween t-rex-running-tween
-        t-rex-ducking-since 0)
-  (retro--play-sprite sprite "ducking"))
+  (when (not (equal "jumping" t-rex-current-play))
+    (setf (retro-sprite-y sprite) *T-REX-DUCKING-GROUND-Y*)
+    (setq t-rex-current-play "ducking"
+          t-rex-current-tween t-rex-running-tween
+          t-rex-ducking-since 0)
+    (retro--play-sprite sprite "ducking")))
 
 (defun dino--t-rex-hit! (sprite)
   "Switch t-rex SPRITE to hit animation."
