@@ -1,6 +1,6 @@
 #+TITLE: retro.el
 
-* RETRO-001 Dino running game [30/38]
+* RETRO-001 Dino running game [31/38]
 Implement "Dino running game" included in Chrome at ~chrome://dino/~
 
 Reference for constants, code and assets
@@ -42,8 +42,7 @@ Reference for constants, code and assets
 - [X] Pixel perfect collision detection
 - [X] FIX: ducking should be shorter
 - [X] FIX: should not duck when jumping
-- [ ] Toggle collision detection with "c"
-- [ ] Toggle drawing bounding box with "d"
+- [X] Toggle collision detection with "c"
 - [ ] Different probability of spawning obstacles
 - [ ] Try to keep tiles and sprites with their state with ~cl-defstruct~ or ~cl-defclass~
 - [ ] Prefix everything with ~dino--~

@@ -277,6 +277,10 @@ TILE-KINDS is the list of tile kinds that can be spawned"
   "Is game paused in GAME-STATE."
   `(eq (nth 6 ,game-state) :pause))
 
+(defmacro collision-detection-enabled? (game-state)
+  "Is collision detection enabled in GAME-STATE."
+  `(plist-get (nth 8 ,game-state) :collision?))
+
 (defun game-over! (game-state)
   "Set GAME-STATE as game over."
   (dino--t-rex-hit! (nth 2 game-state))
@@ -295,7 +299,8 @@ TILE-KINDS is the list of tile kinds that can be spawned"
      (nth 4 game-state) (nth 4 initial-state)
      (nth 5 game-state) (nth 5 initial-state)
      (nth 6 game-state) (nth 6 initial-state)
-     (nth 7 game-state) (nth 7 initial-state))))
+     (nth 7 game-state) (nth 7 initial-state)
+     (nth 8 game-state) (nth 8 initial-state))))
 
 (defun dino--increase-difficulty-level (delta)
   "Increase current difficulty level by DELTA."
@@ -324,7 +329,9 @@ TILE-KINDS is the list of tile kinds that can be spawned"
           (retro--load-font (asset "dino.font")) ; 5 -- font
           :playing                ; 6 -- game status
           tiles      ; 7 -- loaded assets
+          '(:collision? t)              ; 8 -- options
           )))
+
 
 (defun dino-update (elapsed game-state _canvas)
   "Update GAME-STATE after ELAPSED."
@@ -341,7 +348,9 @@ TILE-KINDS is the list of tile kinds that can be spawned"
          (setf (nth 3 game-state) (dino--update-tiles (nth 7 game-state) (nth 3 game-state) *CLOUD-MAX* *CLOUD-GAP* dino--cloud-velociy '(:cloud) elapsed))
          (setf (nth 4 game-state) (dino--update-tiles (nth 7 game-state) (nth 4 game-state) *OBSTACLE-MAX* dino--obstacles-gap dino--ground-velociy *OBSTACLES* elapsed))
          ;; collision detection
-         (when (collision? (nth 2 game-state) (nth 4 game-state) (nth 7 game-state))
+         (when (and
+                (collision-detection-enabled? game-state)
+                (collision? (nth 2 game-state) (nth 4 game-state) (nth 7 game-state)))
            (game-over! game-state))
          (when (funcall pterodactyl-tween elapsed)
            (retro--next-frame-sprite (car (ht-get (nth 7 game-state) :pterodactyl))))
@@ -371,6 +380,14 @@ TILE-KINDS is the list of tile kinds that can be spawned"
         (lambda (game-status)
           (if (eq game-status :playing) :pause :playing))
         (nth 6 game-state))))
+
+(defun dino--command-toggle-collision-detection (game-state _)
+  "Toggle collision detection in GAME-STATE."
+  (when (not (game-over? game-state))
+    (cl-callf
+        (lambda (game-options)
+          (plist-put game-options :collision? (not (plist-get game-options :collision?))))
+        (nth 8 game-state))))
 
 (defun dino--command-jump-or-reset (game-state _)
   "Make T-REX jump or reset GAME-STATE when game over."
@@ -403,6 +420,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
                      :background-color (ht-get retro-palette-colors->index "#ffffff")
                      :bind `(("q" . retro--handle-quit)
                              ("p" . dino--command-toggle-pause)
+                             ("c" . dino--command-toggle-collision-detection)
                              ("<up>" . dino--command-jump-or-reset)
                              ("<down>" . dino--command-duck)
                              ("SPC" . dino--command-jump-or-reset))
