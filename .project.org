@@ -64,7 +64,7 @@ Release ~retro.el~ version 0.0.1
 - [ ] Experiment performance impact of using ~defclass~ and ~defmethod~
 - [ ] Explore how to implement state machines in common lisp
 
-* Refile [2/65]
+* Refile [2/68]
 Tasks to be refiled somewhere else in this project
 
 - [ ] Function ~retro-font-string-width~ to calculate width of a string in a
@@ -152,6 +152,7 @@ Tasks to be refiled somewhere else in this project
 - [ ] Have a way to use ~retro.el~ to create an "image" in part of the buffer.
   Can be helpful to show graphical things without using or producing images or
   better for animated graphics because images in this case is not an option.
+- [ ] Font https://erytau.itch.io/pixuf
 - [ ] Explore if there are audio servers that can be used by Emacs, should work
   like that: Emacs connects to the audio server and when a piece of audio needs
   to be played it can be sent to the server, better if all the audio can be pre
@@ -168,6 +169,7 @@ Tasks to be refiled somewhere else in this project
 - [ ] GAME: flappy bird
 - [ ] GAME: pacman
 - [ ] GAME: pico-8 emulator || similar platform
+- [ ] GAME: chip-8 https://chip-8.github.io/links/
 - [ ] GAME: space invaders original ROM
 - [ ] GAME: game boy emulator?
 - [ ] GAME: [[https://processing.org][processing]] clone?
