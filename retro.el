@@ -58,6 +58,27 @@
 
 ;;; Palette
 
+(defun retro--init-color-palette (colors offset)
+  "Initialize retro palette with COLORS starting from OFFSET."
+  ;; TODO: colors are list of three color components RGB
+  ;; TODO: explain offet
+  (setq retro-palette-faces (make-vector retro-palette-size 0))
+  (setq retro-palette-colors->index (ht-create))
+  (dotimes (i (length colors))
+    (let* ((color (aref colors i))
+           (color-hex (format "#%02X%02X%02X"
+                              (nth 0 color)
+                              (nth 1 color)
+                              (nth 2 color)))
+           (palette-index (+ offset i))
+           (face-name (intern (format "retro-mode-face-%s" (substring color-hex 1)))))
+      (eval `(defface ,face-name
+               '((t :background ,color-hex))
+               ,(format "Face for pixel with color %s" color-hex)
+               :group 'retro-mode))
+      (aset retro-palette-faces palette-index face-name)
+      (ht-set! retro-palette-colors->index color-hex palette-index))))
+
 (defun retro--add-color-to-palette (color)
   "Add COLOR to palette (if not already present) and return its index."
   (setq color (downcase color))
