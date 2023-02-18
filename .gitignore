@@ -3,3 +3,4 @@
 !.project.org
 !.gitignore
 *.elc
+/dist/
