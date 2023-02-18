@@ -3,7 +3,7 @@
 ;; Author: Gabriele Lana <gabriele.lana@gmail.com>
 ;; Maintainer: Gabriele Lana <gabriele.lana@gmail.com>
 ;; Version: 0.0.1
-;; Package-Requires: ((ht "2.0.0"))
+;; Package-Requires: ((emacs "28.1") (ht "2.0.0"))
 ;; Homepage: http://github.com/gabrielelana/retro.el
 ;; Keywords: retro gaming, game, library, graphics
 
@@ -972,9 +972,9 @@ To do that wrap your update function with this function like
                                  handler)
                            result))))))
 
-;;; compatibility with emacs versions < 28.1
-(when (not (fboundp 'garbage-collect-maybe))
-  (defun garbage-collect-maybe (_n) nil))
+;; ;;; compatibility with emacs versions < 28.1
+;; (when (not (fboundp 'garbage-collect-maybe))
+;;   (defun garbage-collect-maybe (_n) nil))
 
 ;; TODO(OPT): always keep the canvas length
 ;; TODO(OPT): inheirth from special-mode
@@ -1005,7 +1005,8 @@ To do that wrap your update function with this function like
           (funcall (retro-game-quit game)))
       (redisplay t)
       (run-with-timer 0.001 nil 'retro--game-loop game game-state now)
-      (garbage-collect-maybe 4)
+      ;; (garbage-collect-maybe 4)
+      (garbage-collect)
       t)))
 
 
