@@ -1,7 +1,7 @@
 (source gnu)
 (source melpa)
 
-(package "retro.el" "0.0.1" "Emacs Retro Game Engine")
+(package-file "retro.el")
 
 (files "*.el")
 
