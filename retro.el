@@ -52,6 +52,14 @@
 (defvar retro-square-font-family "Kreative Square SM"
   "Font family used to create the illusion of pixels.")
 
+;;; TODO: documentation
+(defconst retro-default-face-height 20)
+
+;;; TODO: documentation
+(defface retro-default-face `((t :family ,retro-square-font-family :height ,retro-default-face-height))
+  "Face used as default face for retro buffers."
+  :group 'retro-mode)
+
 ;; (defvar retro-square-font-family "Topaz-8"
 ;   "Font family used to create the illusion of pixels.")
 
@@ -73,7 +81,7 @@
            (palette-index (+ offset i))
            (face-name (intern (format "retro-mode-face-%s" (substring color-hex 1)))))
       (eval `(defface ,face-name
-               '((t :background ,color-hex))
+               '((t :inherit retro-default-face :background ,color-hex))
                ,(format "Face for pixel with color %s" color-hex)
                :group 'retro-mode))
       (aset retro-palette-faces palette-index face-name)
@@ -164,10 +172,12 @@ resolution in WINDOW."
           (when display-line-numbers
             (display-line-numbers-mode -1))
           (set-window-buffer window (current-buffer))
-          (face-remap-add-relative 'default :family retro-square-font-family :height current-pixel-size)
+          (set-face-attribute 'retro-default-face nil :height current-pixel-size)
+          (buffer-face-set 'retro-default-face)
           (let* ((window-width (window-body-width window t))
                  (font-width (window-font-width window))
                  ;; window-mode-line-height lies with doom-modeline
+                 ;; TODO: remove this since we remove the modeline when we run?
                  (mode-line-height (or (and (boundp 'doom-modeline-mode) doom-modeline-mode
                                             (boundp 'doom-modeline-height) doom-modeline-height)
                                        (window-mode-line-height window)))
@@ -176,6 +186,10 @@ resolution in WINDOW."
                  (n-columns (/ window-width font-width))
                  (n-lines (floor (/ window-height font-height)))
                  (waste (+ (- n-columns width) (- n-lines height))))
+            ;; (message "current-pixel-size: %S [%S, %S]" current-pixel-size min-pixel-size max-pixel-size)
+            ;; (message "n-columns: %S (< %S)" n-columns width)
+            ;; (message "n-lines: %S (< %S)" n-lines height)
+            ;; (message "waste: %S (< %S)" waste (and result (car result)))
             (if (or (< n-columns width) (< n-lines height))
                 ;; current-pixel-size is too big
                 (setq max-pixel-size current-pixel-size)
@@ -187,6 +201,7 @@ resolution in WINDOW."
                 ;; we did not improve, bail
                 (setq stop t))
               )))))
+    (set-face-attribute 'retro-default-face nil :height retro-default-face-height)
     (cdr result)))
 
 (defun retro--init-canvas (window buffer-name canvas-width canvas-height background-color)
@@ -229,7 +244,8 @@ BACKGROUND-COLOR is the background color."
       (mouse-wheel-mode -1)
       (auto-save-mode -1)
       (goto-char (point-min))
-      (face-remap-add-relative 'default :family retro-square-font-family :height pixel-size)
+      (set-face-attribute 'retro-default-face nil :height pixel-size)
+      (buffer-face-set 'retro-default-face)
       (let* ((margin-top (/ (- window-height canvas-height) 2))
              (margin-left (/ (- window-width canvas-width) 2))
              (canvas (retro-canvas-create :margin-left margin-left
@@ -872,7 +888,7 @@ Colors should be specified as RGB hex string (ex. \"0xffffff\")
                                    :render render
                                    :quit-p nil
                                    :before-quit before-quit
-                                   :quit (lambda () (switch-to-buffer original-buffer))
+                                   :quit (lambda () (kill-buffer buffer-name))
                                    :pending-events '()
                                    :current-canvas current-canvas
                                    :previous-canvas previous-canvas)))
@@ -1006,7 +1022,7 @@ To do that wrap your update function with this function like
       (redisplay t)
       (run-with-timer 0.001 nil 'retro--game-loop game game-state now)
       ;; (garbage-collect-maybe 4)
-      (garbage-collect)
+      ;; (garbage-collect)
       t)))
 
 
