@@ -3,16 +3,18 @@
 EMACS ?= emacs
 CASK ?= cask
 
+SOURCE = $(shell ls *.el | grep -v retro-pkg.el)
+
 all: clean prepare test compile test clean
 
 prepare:
 	${CASK} install
 
 test:
-	${CASK} exec ert-runner --load *.el test/*-test.el
+	${CASK} exec ert-runner --load ${SOURCE} test/*-test.el
 
 compile:
-	${CASK} exec ${EMACS} -Q -batch -f batch-byte-compile *.el
+	${CASK} exec ${EMACS} -Q -batch -f batch-byte-compile ${SOURCE}
 
 clean:
 	${CASK} clean-elc
