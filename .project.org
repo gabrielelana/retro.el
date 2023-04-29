@@ -1,5 +1,16 @@
 #+TITLE: retro.el
 
+* RETRO-003 Performance [5/7]
+Improve performance generally
+
+- [X] How to run benchmark? With a custom loop runner?
+- [X] Benchmark square single color
+- [X] Benchmark square single color changing at every frame
+- [X] Benchmark multiple squares, square colors change at every frame
+- [X] Benchmark multiple squares, square colors and dimensions change at every frame
+- [ ] Calculate fragmentation
+- [ ] Unroll loop ~retro--buffer-render~ with macro ~(while-unroll 10 CONDITION BODY)~
+
 * RETRO-001 Dino running game [31/38]
 Implement "Dino running game" included in Chrome at ~chrome://dino/~
 

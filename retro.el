@@ -114,6 +114,12 @@
   (dolist (color colors)
     (retro--add-color-to-palette color)))
 
+(defun retro-palette-color-index (color)
+  "Return COLOR index in palette.
+
+It will add COLOR to palette if not present."
+  (retro--add-color-to-palette color))
+
 
 ;;; Canvas
 
@@ -1083,9 +1089,9 @@ To do that wrap your update function with this function like
         ;; TODO(OPT): to here >>>
         ;; previous canvas pixel and current canvas pixel are different
         (if (eq cpc ccc)
-            ;; current pixel and previous pixel are on the same line
+            ;; current pixel and previous pixel are same color and on the same line
             (setq length (1+ length))
-          ;; current pixel and previous pixel are different
+          ;; current pixel and previous pixel are different color
           (when (> length 0)
             ;; plot the accomulated line so far and reset the counters
             (setq buffer-start (+ bbl bbcll bml start 1)
