@@ -8,8 +8,9 @@
         (height 240))
     (retro-game-create :name "bouncing-ball"
                        :resolution (cons width height)
+                       :background-color (retro--add-color-to-palette "#000000")
                        :bind '(("q" . retro--handle-quit))
-                       :init (lambda () (list 0 30.0 30.0 3 0 0)) ; i dx/s dy/s size x y
+                       :init (lambda () (list 0 100.0 100.0 10 0 0)) ; i dx/s dy/s size x y
                        :update (lambda (elapsed game-state _canvas)
                                  (when (eq (% (nth 0 game-state) 100) 0)
                                    (message "[%03d] FPS: %f, elapsed: %fs" (nth 0 game-state) (/ 1.0 elapsed) elapsed))
@@ -39,7 +40,13 @@
                                  (let ((size (nth 3 game-state))
                                        (x (round (nth 4 game-state)))
                                        (y (round (nth 5 game-state))))
-                                   (retro--plot-filled-rectangle x y (+ x size) (+ y size) 15 canvas))))))
+                                   (retro--plot-filled-rectangle
+                                    x
+                                    y
+                                    (+ x size)
+                                    (+ y size)
+                                    (retro--add-color-to-palette "#FFFFFF")
+                                    canvas))))))
 
 (defun bouncing-ball-demo-start ()
   (interactive)
