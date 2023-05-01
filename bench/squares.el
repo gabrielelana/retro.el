@@ -26,6 +26,7 @@
 
 (require 'retro (expand-file-name "./../retro.el") t)
 (require 'retro (expand-file-name "./retro.el") t)
+(require 'cl-lib)
 
 (defvar TILE-COLORS
   '("#800000" "#8B0000" "#A52A2A" "#B22222" "#DC143C" "#FF0000"
