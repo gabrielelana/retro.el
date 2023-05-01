@@ -224,10 +224,7 @@ resolution. Default 80."
        (setq shift-x (mod (1+ shift-x) square-side)
              shift-y (mod (1+ shift-y) square-side))))))
 
-;;; TODO: rename mean to render-mean
-;;; TODO: rename std-dev to render-std-dev
-;;; TODO: rename fps to render-ps
-;;; TODO: add frame-mean frame-std-dev frame-ps
+;;; TODO: compare results with best, print results table with colored diff
 
 (defun benchmark-run-all (benchmarks)
   "Run all BENCHMARKS."
