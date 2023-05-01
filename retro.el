@@ -63,6 +63,17 @@
 ;; (defvar retro-square-font-family "Topaz-8"
 ;   "Font family used to create the illusion of pixels.")
 
+;;; TODO: move from here
+(defmacro while-unroll (unrolls-count condition &rest body)
+  "Unroll while loop by UNROLLS-COUNT with CONDITION and BODY."
+  (declare (indent defun))
+  (let (unrolled)
+    (dotimes (_ unrolls-count)
+      (if (not unrolled)
+          (setq unrolled `(when ,condition ,@body))
+        (setq unrolled `(when ,condition ,@body ,unrolled))))
+    `(while ,condition ,unrolled)))
+
 
 ;;; Palette
 
@@ -1034,9 +1045,9 @@ To do that wrap your update function with this function like
 
 ;;; Buffer
 
-;; TODO(OPT): unroll loop (while-unroll 10 CONDITION BODY)
 (defun retro--buffer-render (current-canvas previous-canvas)
-  "Render CANVAS into current buffer."
+  "Render CURRENT-CANVAS given PREVIOUS-CANVAS into current buffer."
+  (declare (speed 3))
   (let* ((cpxs (retro-canvas-pixels current-canvas))
          (ppxs (retro-canvas-pixels previous-canvas))
          (width (retro-canvas-width current-canvas))
@@ -1044,6 +1055,7 @@ To do that wrap your update function with this function like
          (bbl (retro-canvas-buffer-before-length current-canvas))
          (bll (retro-canvas-buffer-line-length current-canvas))
          (bml (retro-canvas-margin-left current-canvas))
+         (bsc (+ bbl bml 1))
          (cl (* width height))          ; canvas length
          (column -1)
          (line 0)
@@ -1058,14 +1070,14 @@ To do that wrap your update function with this function like
          (i 0))
     (setq-local buffer-read-only nil)
     (while (< i cl)
-      ;; TODO(OPT): optimize from here <<<
       (setq ccc (aref cpxs i)
             pcc (aref ppxs i)
             column (1+ column))
-      (when (= column width)
+      (when (eq column width)
         ;; at the end of the buffer line
         (when (> length 0)
-          (setq buffer-start (+ bbl bbcll bml start 1)
+          ;; plot the accomulated line so far and reset the counters
+          (setq buffer-start (+ bsc bbcll start)
                 buffer-end (+ buffer-start length))
           (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc))
           (setq length 0
@@ -1074,19 +1086,16 @@ To do that wrap your update function with this function like
         (setq line (1+ line)
               bbcll (* bll line)
               column 0))
-      ;; TODO(OPT): to here >>>
       (if (eq pcc ccc)
-          ;; TODO(OPT): optimize from here <<<
           ;; previous canvas pixel and current canvas pixel are the same
           (when (> length 0)
             ;; plot the accomulated line so far and reset the counters
-            (setq buffer-start (+ bbl bbcll bml start 1)
+            (setq buffer-start (+ bsc bbcll start)
                   buffer-end (+ buffer-start length))
             (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc))
             (setq length 0
                   start column
                   cpc nil))
-        ;; TODO(OPT): to here >>>
         ;; previous canvas pixel and current canvas pixel are different
         (if (eq cpc ccc)
             ;; current pixel and previous pixel are same color and on the same line
@@ -1094,7 +1103,7 @@ To do that wrap your update function with this function like
           ;; current pixel and previous pixel are different color
           (when (> length 0)
             ;; plot the accomulated line so far and reset the counters
-            (setq buffer-start (+ bbl bbcll bml start 1)
+            (setq buffer-start (+ bsc bbcll start)
                   buffer-end (+ buffer-start length))
             (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc)))
           (setq start column
@@ -1103,9 +1112,127 @@ To do that wrap your update function with this function like
       (setq i (1+ i)))
     (when (> length 0)
       ;; plot the accomulated line so far
-      (setq buffer-start (+ bbl bbcll bml start 1)
+      (setq buffer-start (+ bsc bbcll start)
             buffer-end (+ buffer-start length))
       (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc)))
+    (setq-local buffer-read-only t)))
+
+;;; Experiment
+(defun retro--buffer-render-direct (current-canvas)
+  "Render CURRENT-CANVAS into current buffer."
+  (declare (speed 3))
+  (let* ((cpxs (retro-canvas-pixels current-canvas))
+         (width (retro-canvas-width current-canvas))
+         (height (retro-canvas-height current-canvas))
+         (bbl (retro-canvas-buffer-before-length current-canvas))
+         (bll (retro-canvas-buffer-line-length current-canvas))
+         (bml (retro-canvas-margin-left current-canvas))
+         (bsc (+ bbl bml 1))
+         (cl (* width height))          ; canvas length
+         (column -1)
+         (line 0)
+         (bbcll 0)
+         (start 0)
+         (buffer-start nil)
+         (buffer-end nil)
+         (length 0)
+         (cpc nil)                      ; current-canvas previous color
+         (ccc nil)                      ; current-canvas current color
+         (i 0))
+    (setq-local buffer-read-only nil)
+    (while (< i cl)
+      (setq ccc (aref cpxs i)
+            column (1+ column))
+      (when (= column width)
+        ;; at the end of the buffer line
+        (when (> length 0)
+          ;; plot the accomulated line so far and reset the counters
+          (setq buffer-start (+ bsc bbcll start)
+                buffer-end (+ buffer-start length))
+          (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc))
+          (setq length 0
+                start 0
+                cpc nil))
+        (setq line (1+ line)
+              bbcll (* bll line)
+              column 0))
+      (if (eq cpc ccc)
+          ;; current pixel and previous pixel are same color and on the same line
+          (setq length (1+ length))
+        ;; current pixel and previous pixel are different color
+        (when (> length 0)
+          ;; plot the accomulated line so far and reset the counters
+          (setq buffer-start (+ bsc bbcll start)
+                buffer-end (+ buffer-start length))
+          (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc)))
+        (setq start column
+              length 1
+              cpc ccc))
+      (setq i (1+ i)))
+    (when (> length 0)
+      ;; plot the accomulated line so far
+      (setq buffer-start (+ bsc bbcll start)
+            buffer-end (+ buffer-start length))
+      (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc)))
+    (setq-local buffer-read-only t)))
+
+;;; Experiment
+(defun retro--buffer-render-pointer (current-canvas previous-canvas)
+  "Render CURRENT-CANVAS given PREVIOUS-CANVAS into current buffer.
+
+This is supposed to run in an initialized buffer where you want
+to render the CURRENT-CANVAS."
+  (declare (speed 3))
+  (let* ((cpxs (retro-canvas-pixels current-canvas))
+         (ppxs (retro-canvas-pixels previous-canvas))
+         (width (retro-canvas-width current-canvas))
+         (height (retro-canvas-height current-canvas))
+         (bbl (retro-canvas-buffer-before-length current-canvas))
+         (bml (retro-canvas-margin-left current-canvas))
+         (cl (* width height))          ; canvas length
+         (bc (+ bbl bml 1))
+         (start 0)                      ; start of the strike
+         (end 0)                        ; end of the strike
+         (ccpc nil)                     ; current-cancs previous color
+         (cccc nil)                     ; current-canvas current color
+         (pccc nil))                    ; previous-canvas current color
+    (setq-local buffer-read-only nil)
+    (while (< end cl)
+      (setq cccc (aref cpxs end)
+            pccc (aref ppxs end))
+      (if (eq pccc cccc)
+          ;; previous canvas pixel and current canvas pixel are the same
+          (progn
+            (when (> end start)
+             ;; we have a stroke pending, plot the stroke
+             (put-text-property (+ bc start) (+ bc end) 'face (aref retro-palette-faces ccpc)))
+            (setq end (1+ end)
+                  start end))
+        ;; previous canvas pixel and current canvas pixel are different
+        (if (> end start)
+            ;; we have a stroke pending
+            (if (eq ccpc cccc)
+                ;; current pixel has the same color of the stroke, we extend the stroke
+                (setq end (1+ end))
+              ;; current pixel has different color than the stroke, plot the stroke
+              (put-text-property (+ bc start) (+ bc end) 'face (aref retro-palette-faces ccpc))
+              (setq start end
+                    end (1+ end)
+                    ccpc cccc))
+          ;; we don't have a pending stroke
+          (setq start end
+                end (1+ end)
+                ccpc cccc)))
+      ;; evaluate if we are at the end of the line
+      (when (eq 0 (mod end width))
+        ;; we are at the end of the line
+        (when (> end start)
+          (put-text-property (+ bc start) (+ bc end) 'face (aref retro-palette-faces ccpc))
+          (setq start end
+                ccpc nil))
+        (setq bc (+ bc bml 1))))
+    (when (> end start)
+      (put-text-property (+ bc start) (+ bc end) 'face (aref retro-palette-faces ccpc)))
     (setq-local buffer-read-only t)))
 
 
