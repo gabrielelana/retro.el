@@ -1238,11 +1238,22 @@ to render the CURRENT-CANVAS."
 
 ;;; Plot shapes
 
+
+(defsubst retro--plot-pixel-v (i color pixels)
+  "Plot a pixel with COLOR at index I in CANVAS."
+  ;; TODO: assert out of bounds
+  (aset pixels i color))
+
+(defsubst retro--plot-pixel (x y color pixels width)
+  "Plot a pixel with COLOR at (X, Y) in CANVAS."
+  ;; TODO: assert out of bounds
+  (aset pixels (+ (* y width) x) color))
+
 (defun retro--plot-filled-rectangle (x0 y0 x1 y1 color canvas)
   "Plot a filled rectangle with COLOR from (X0, Y0) to (X1, Y1) in CANVAS.
 
-'(X0, Y0) is the top left corner.
-'(X1, Y1) is the bottom right corner."
+\(X0, Y0) is the top left corner.
+\(X1, Y1) is the bottom right corner."
   (let ((pixels (retro-canvas-pixels canvas))
         (width (retro-canvas-width canvas)))
     (dotimes (dx (1+ (- x1 x0)))
@@ -1263,17 +1274,6 @@ to render the CURRENT-CANVAS."
                (setq y (+ y 1)
                      D (- D (* 2 dx))))
              (setq D (+ D (* 2 dy))))))
-
-(defun retro--plot-pixel-v (i color pixels)
-  "Plot a pixel with COLOR at index I in CANVAS."
-  ;; TODO: assert out of bounds
-  (aset pixels i color))
-
-(defun retro--plot-pixel (x y color pixels width)
-  "Plot a pixel with COLOR at (X, Y) in CANVAS."
-  ;; TODO: assert out of bounds
-  (aset pixels (+ (* y width) x) color))
-
 
 
 ;;; Collision detection
