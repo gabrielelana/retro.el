@@ -1121,6 +1121,79 @@ To do that wrap your update function with this function like
       (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc)))
     (setq-local buffer-read-only t)))
 
+(defun retro--buffer-render-next (current-canvas previous-canvas)
+  "Render CURRENT-CANVAS given PREVIOUS-CANVAS into current buffer."
+  (declare (speed 3))
+  (let* ((cpxs (retro-canvas-pixels current-canvas))
+         (ppxs (retro-canvas-pixels previous-canvas))
+         (width (retro-canvas-width current-canvas))
+         (height (retro-canvas-height current-canvas))
+         (bbl (retro-canvas-buffer-before-length current-canvas))
+         (bll (retro-canvas-buffer-line-length current-canvas))
+         (bml (retro-canvas-margin-left current-canvas))
+         (bsc (+ bbl bml 1))
+         (cl (1- (* width height)))          ; canvas length
+         (column 0)
+         (line 0)
+         (bbcll 0)
+         (start 0)
+         (buffer-start nil)
+         (buffer-end nil)
+         (length 0)
+         (i 0)
+         (cpc nil)                      ; current-canvas previous color
+         (ccc nil)                      ; current-canvas current color
+         (pcc nil)                      ; previous-canvas current color
+         )
+    (setq-local buffer-read-only nil)
+    ;; for each lines
+    (while (< line height)
+      ;; line routine
+     (while (< column width)
+       (setq cpc ccc
+             ccc (aref cpxs i)
+             pcc (aref ppxs i))
+       ;; if previous canvas pixel and current canvas pixel are the same
+       (while (and (eq ccc pcc) (< column width))
+         ;; skip those pixels and do nothing, the current canvas is ok as it is
+         (setq i (min (1+ i) cl)
+               column (1+ column)
+               cpc ccc
+               ccc (aref cpxs i)
+               pcc (aref ppxs i)))
+       ;; start a stroke
+       (when (< column width)
+         (setq start column
+               length 1
+               i (min (1+ i) cl)
+               column (1+ column)
+               cpc ccc
+               ccc (aref cpxs i)))
+       ;; if previous pixel and current pixel are the same
+       (while (and (eq cpc ccc) (< column width))
+         ;; accumulate pixels in the current stroke
+         (setq i (min (1+ i) cl)
+               column (1+ column)
+               length (1+ length)
+               cpc ccc
+               ccc (aref cpxs i)))
+       ;; plot the stroke
+       ;; TODO: can add bsc to bbcll at the beginning one time
+       (setq buffer-start (+ bsc bbcll start)
+             buffer-end (+ buffer-start length))
+       (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc))
+       (setq length 0
+             start 0))
+     ;; next line
+     (setq column 0
+           line (1+ line)
+           cpc nil
+           ccc nil
+           pcc nil
+           bbcll (+ bbcll bll)))
+    ;; TODO: next line
+    (setq-local buffer-read-only t)))
+
 (defun retro--buffer-render-unrolled (current-canvas previous-canvas)
   "Render CURRENT-CANVAS given PREVIOUS-CANVAS into current buffer."
   (declare (speed 3))
