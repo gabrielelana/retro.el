@@ -1,4 +1,4 @@
-;;; retro.el --- Library to create retro games in Emacs -*- lexical-binding: t -*-
+;;; retro.el --- Library to create retro games for Emacs in EmacsLisp -*- lexical-binding: t -*-
 
 ;; Author: Gabriele Lana <gabriele.lana@gmail.com>
 ;; Maintainer: Gabriele Lana <gabriele.lana@gmail.com>
@@ -24,7 +24,7 @@
 
 ;;; Commentary:
 
-;; Library to create retro games in Emacs.
+;; Library to create retro games for Emacs in EmacsLisp.
 
 ;;; Code:
 
