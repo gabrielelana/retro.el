@@ -1026,13 +1026,13 @@ Colors should be specified as RGB hex string (ex. \"0xffffff\")
              (if handler
                  ;; TODO: give also the third parameter
                  (funcall handler game-state game)
-               (user-error "missing handler for keypress %s" (cdr event))))
+               (user-error "Missing handler for keypress %s" (cdr event))))
             ((eq (car event) 'mouseclick)
              (setq handler (alist-get (cadr event) bind))
              (if handler
                  (funcall handler game-state game (cddr event))
-               (user-error "missing handler for mouseclick %s" (cadr event))))
-            (t (user-error "missing handler for event %s" event)))))
+               (user-error "Missing handler for mouseclick %s" (cadr event))))
+            (t (user-error "Missing handler for event %s" event)))))
   (setf (retro-game-pending-events game) '()))
 
 (defun retro--update-every (seconds update)
@@ -1053,7 +1053,7 @@ seconds).
 To do that wrap your update function with this function like
 
     (retro-game ...
-                :update (update-every 0.5 'your-update-function)
+                :update (update-every 0.5 \=your-update-function)
                 ...)"
   (let ((since-last-update 0.0))
     (lambda (elapsed game-state canvas)
