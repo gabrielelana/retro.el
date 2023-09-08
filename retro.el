@@ -154,6 +154,14 @@ It will add COLOR to palette if not present."
                        :height (retro-canvas-height canvas)
                        :background-color (retro-canvas-background-color canvas)))
 
+(defun retro-canvas-pixels-copy (from to)
+  "Copy pixels in canvas FROM to pixels in canvas TO."
+  (setf (retro-canvas-pixels to) (copy-sequence (retro-canvas-pixels from))))
+
+(defun retro-canvas-pixels-pixel (x y pixels width)
+  "Get pixel color at (X, Y) in PIXELS with a certain WIDTH."
+  (aref pixels (+ (* y width) x)))
+
 (defun retro--reset-canvas (canvas)
   "Clean all CANVAS pixels."
   (fillarray (retro-canvas-pixels canvas) (retro-canvas-background-color canvas)))
@@ -210,6 +218,81 @@ resolution in WINDOW."
     (set-face-attribute 'retro-default-face nil :height retro-default-face-height)
     (cdr result)))
 
+(defun retro-init-buffer (buffer-name screen-width screen-height background-color switch-to-buffer-p)
+  "Setup buffer BUFFER-NAME as retro.el requires.
+
+Will return a retro.el canvas ready to be used as screen with
+retro.el primitives.
+
+Canvas will be initialized with a screen width SCREEN-WIDTH,
+SCREEN-HEIGHT and a background color with index BACKGROUND-COLOR.
+
+When setup is completed will switch to BUFFER-NAME
+if SWITCH-TO-BUFFER-P is t."
+  (select-window (or (get-buffer-window buffer-name)
+                     (selected-window)))
+  (with-current-buffer (get-buffer-create buffer-name)
+    ;; Disable mode-line before calibration
+    (let* ((window (selected-window))
+           ;; NOTE: without switching to buffer, buffer calibration is not
+           ;; reliable, I didn't find a way to make it work but since we don't
+           ;; need precision because we are not looking at the buffer, a dummy
+           ;; but credible calibration will do
+           (calibration (if switch-to-buffer-p
+                            (retro--calibrate-canvas-in-window
+                             screen-width
+                             screen-height
+                             window)
+                          (list 10 screen-width screen-height)))
+           (pixel-size (nth 0 calibration))
+           (window-width (nth 1 calibration))
+           (window-height (nth 2 calibration)))
+      (when (not calibration) (error "Failed to calibrate pixel size in buffer %s" buffer-name))
+      ;; Buffer settings to not display text but display graphics
+      (erase-buffer)
+      (buffer-disable-undo)
+      (jit-lock-mode -1)
+      (font-lock-mode -1)
+      (mouse-wheel-mode -1)
+      (auto-save-mode -1)
+      ;; (set-buffer-multibyte nil)
+      (setq-local visible-cursor nil
+                  hl-line-mode nil
+                  mode-line-format nil
+                  cursor-type nil
+                  inhibit-modification-hooks t
+                  inhibit-compacting-font-caches t
+                  bidi-inhibit-bpa t
+                  bidi-display-reordering nil
+                  bidi-paragraph-direction 'left-to-right)
+      ;; Buffer initialization with background pixels
+      (goto-char (point-min))
+      (set-face-attribute 'retro-default-face nil :height pixel-size)
+      (buffer-face-set 'retro-default-face)
+      (let* ((margin-top (/ (- window-height screen-height) 2))
+             (margin-left (/ (- window-width screen-width) 2))
+             (canvas (retro-canvas-create :margin-left margin-left
+                                          :margin-top margin-top
+                                          :width screen-width
+                                          :height screen-height
+                                          :background-color background-color))
+             (margin-top-string (propertize (make-string (+ margin-left screen-width) 32) 'face 'default))
+             (margin-left-string (propertize (make-string margin-left 32) 'face 'default))
+             (canvas-string (propertize (make-string screen-width 32) 'face (aref retro-palette-faces background-color))))
+        (setq-local buffer-read-only nil)
+        (dotimes (_ margin-top)
+          (insert margin-top-string)
+          (insert "\n"))
+        (dotimes (_ screen-height)
+          (insert margin-left-string)
+          (insert canvas-string)
+          (insert "\n"))
+        (setq-local buffer-read-only t)
+        (when switch-to-buffer-p
+          (switch-to-buffer buffer-name))
+        canvas))))
+
+;;; TODO: remove, replaced by retro-init-buffer
 (defun retro--init-canvas (window buffer-name canvas-width canvas-height background-color)
   "Create a buffer with BUFFER-NAME in WINDOW for the specified canvas.
 
