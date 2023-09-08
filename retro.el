@@ -142,7 +142,7 @@ It will add COLOR to palette if not present."
                         :width width
                         :height height
                         :background-color background-color
-                        :pixels (make-vector (1+ (* width height)) background-color)
+                        :pixels (make-vector (* width height) background-color)
                         :buffer-before-length (* (+ margin-left width 1) margin-top)
                         :buffer-line-length (+ margin-left width 1)))
 
@@ -1036,7 +1036,6 @@ To do that wrap your update function with this function like
 
 (defun retro--buffer-render (current-canvas previous-canvas)
   "Render CURRENT-CANVAS given PREVIOUS-CANVAS into current buffer."
-  (declare (speed 3))
   (let* ((cpxs (retro-canvas-pixels current-canvas))
          (ppxs (retro-canvas-pixels previous-canvas))
          (width (retro-canvas-width current-canvas))
@@ -1056,48 +1055,59 @@ To do that wrap your update function with this function like
          (pcc nil)                      ; previous-canvas current color
          (i 0))
     (setq-local buffer-read-only nil)
-    (while (< i cl)
-      ;; line routine
-      (setq cpc ccc
-            ccc (aref cpxs i)
-            pcc (aref ppxs i))
-      ;; if previous canvas pixel and current canvas pixel are the same
-      (while (and (eq ccc pcc) (< column width))
-        ;; skip those pixels and do nothing, the current canvas is ok as it is
-        (setq i (1+ i)
-              column (1+ column)
-              cpc ccc
-              ccc (aref cpxs i)
-              pcc (aref ppxs i)))
-      ;; start a stroke
-      (when (< column width)
-        (setq start column
-              length 1
-              i (1+ i)
-              column (1+ column)
-              cpc ccc
-              ccc (aref cpxs i)))
-      ;; if previous pixel and current pixel are the same
-      (while (and (eq cpc ccc) (< column width))
-        ;; accumulate pixels in the current stroke
-        (setq i (1+ i)
-              column (1+ column)
-              length (1+ length)
-              cpc ccc
-              ccc (aref cpxs i)))
-      ;; plot the stroke
+    (catch 'stop
+      (while (< i cl)
+       ;; line routine
+       (setq cpc ccc
+             ccc (aref cpxs i)
+             pcc (aref ppxs i))
+       ;; if previous canvas pixel and current canvas pixel are the same
+       (while (and (eq ccc pcc) (< column width))
+         ;; skip those pixels and do nothing, the current canvas is ok as it is
+         (setq i (1+ i)
+               column (1+ column)
+               cpc ccc)
+         (when (>= i cl)
+           (throw 'stop nil))
+         (setq ccc (aref cpxs i)
+               pcc (aref ppxs i)))
+       ;; start a stroke
+       (when (< column width)
+         (setq start column
+               length 1
+               i (1+ i)
+               column (1+ column)
+               cpc ccc)
+         (when (>= i cl)
+           (throw 'stop nil))
+         (setq ccc (aref cpxs i)))
+       ;; if previous pixel and current pixel are the same
+       (while (and (eq cpc ccc) (< column width))
+         ;; accumulate pixels in the current stroke
+         (setq i (1+ i)
+               column (1+ column)
+               length (1+ length)
+               cpc ccc)
+         (when (>= i cl)
+           (throw 'stop nil))
+         (setq ccc (aref cpxs i)))
+       ;; plot the stroke
+       (setq buffer-start (+ bbcll start)
+             buffer-end (+ buffer-start length))
+       (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc))
+       (setq length 0
+             start 0)
+       ;; next line
+       (when (>= column width)
+         (setq column 0
+               cpc nil
+               ccc nil
+               pcc nil
+               bbcll (+ bbcll bll)))))
+    (when (> length 0)
       (setq buffer-start (+ bbcll start)
             buffer-end (+ buffer-start length))
-      (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc))
-      (setq length 0
-            start 0)
-      ;; next line
-      (when (>= column width)
-        (setq column 0
-              cpc nil
-              ccc nil
-              pcc nil
-              bbcll (+ bbcll bll))))
+      (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc)))
     (setq-local buffer-read-only t)))
 
 
