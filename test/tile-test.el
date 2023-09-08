@@ -26,11 +26,8 @@
 
 (require 'ert)
 
-;;; TODO: is there a better way to support both flycheck and ert-runner?
+(require 'retro)
 (require 'test-helper (expand-file-name "./test-helper.el") t)
-(require 'test-helper (expand-file-name "./test/test-helper.el") t)
-(require 'retro (expand-file-name "./../retro.el") t)
-(require 'retro (expand-file-name "./retro.el") t)
 
 (defvar simple-tile '("3 3 #000000"
                       "#ff0000  #00ff00 #0000ff"

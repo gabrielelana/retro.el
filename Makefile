@@ -11,7 +11,13 @@ prepare:
 	${CASK} install
 
 test:
-	${CASK} exec ert-runner --load ${SOURCE} test/*-test.el
+	${CASK} emacs --batch -L . -L test \
+		-l test-helper \
+		-l tile-test \
+		-l canvas-test \
+		-l sprite-test \
+		-l collision-test \
+		-f ert-run-tests-batch
 
 compile:
 	${CASK} exec ${EMACS} -Q -batch -f batch-byte-compile ${SOURCE}

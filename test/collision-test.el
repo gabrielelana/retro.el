@@ -1,4 +1,4 @@
-;;; collision-test.el --- summary -*- lexical-binding: t -*-
+;;; collision-test.el --- collision detection tests -*- lexical-binding: t -*-
 
 ;; Author: Gabriele Lana <gabriele.lana@gmail.com>
 ;; Maintainer: Gabriele Lana <gabriele.lana@gmail.com>
@@ -20,16 +20,15 @@
 
 ;;; Commentary:
 
-;; summary
+;; collision detection tests
 
 ;;; Code:
 
 (require 'ert)
 
+(require 'retro)
 (require 'test-helper (expand-file-name "./test-helper.el") t)
-(require 'test-helper (expand-file-name "./test/test-helper.el") t)
-(require 'retro (expand-file-name "./../retro.el") t)
-(require 'retro (expand-file-name "./retro.el") t)
+
 
 (defvar shape-1
   (let ((px (make-vector (* 4 4) 0)))
