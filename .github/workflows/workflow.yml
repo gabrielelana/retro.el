@@ -7,7 +7,7 @@ jobs:
 
     strategy:
       matrix:
-        emacs_version: ["27.2", "snapshot"]
+        emacs_version: ['27.2', '29.1', 'snapshot']
 
     steps:
       - name: Checkout repository
@@ -16,8 +16,8 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v2
         with:
-          python-version: "3.6"
-          architecture: "x64"
+          python-version: '3.6'
+          architecture: 'x64'
 
       - name: Install Emacs
         uses: purcell/setup-emacs@master
@@ -27,7 +27,7 @@ jobs:
       - name: Install Cask
         uses: conao3/setup-cask@master
         with:
-          version: "snapshot"
+          version: 'snapshot'
 
       - name: Install dependencies
         run: make prepare
