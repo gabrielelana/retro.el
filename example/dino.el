@@ -33,9 +33,9 @@
 (defvar dino--cloud-velociy *DINO--DEFAULT-CLOUD-VELOCITY*)
 (defvar dino--obstacles-gap (copy-tree *DINO--DEFAULT-OBSTACLES-GAP*))
 
-(defmacro asset (file-name)
+(defsubst asset (file-name)
   "Absolute file path of asset FILE-NAME."
-  `(concat ,*ASSET-DIRECTORY* ,file-name))
+  (concat *ASSET-DIRECTORY* file-name))
 
 ;;; ============================================================================
 ;;; Clouds
@@ -235,26 +235,30 @@ TILE-KINDS is the list of tile kinds that can be spawned"
 (defun collision? (t-rex obstacles obstacles-assets)
   "Collision between T-REX and OBSTACLES for OBSTACLES-ASSETS."
   (let ((t-rex-bb (retro-bb-sprite t-rex))
-        (t-rex-frame (retro-sprite-frame t-rex)))
+        ;; (t-rex-frame (retro-sprite-frame t-rex))
+        )
     (seq-some (lambda (obstacle)
                 (let* ((obstacle-kind (car obstacle))
                        (obstacle-coordinates (cdr obstacle))
                        (obstacle-asset (car (ht-get obstacles-assets obstacle-kind)))
                        obstacle-bb
-                       obstacle-frame)
+                       ;; obstacle-frame
+                       )
                   (when (retro-tile-p obstacle-asset)
                     (setq obstacle-bb (cons obstacle-coordinates
                                             (cons (1- (+ (car obstacle-coordinates) (retro-tile-width obstacle-asset)))
                                                   (1- (+ (cdr obstacle-coordinates) (retro-tile-height obstacle-asset)))))
-                          obstacle-frame (retro-tile-pixels obstacle-asset)))
+                          ;; obstacle-frame (retro-tile-pixels obstacle-asset)
+                          ))
                   (when (retro-sprite-p obstacle-asset)
                     (setq obstacle-bb (cons obstacle-coordinates
                                             (cons (1- (+ (car obstacle-coordinates) (retro-sprite-width obstacle-asset)))
                                                   (1- (+ (cdr obstacle-coordinates) (retro-sprite-height obstacle-asset)))))
-                          obstacle-frame (retro-sprite-frame obstacle-asset)))
+                          ;; obstacle-frame (retro-sprite-frame obstacle-asset)
+                          ))
                   (and (>= (retro-bb-right t-rex-bb) (retro-bb-left obstacle-bb))
                        (retro-bb-intersect? t-rex-bb obstacle-bb)
-                       (retro-pp-intersect? t-rex-frame t-rex-bb 0 obstacle-frame obstacle-bb 0)
+                       ;; (retro-pp-intersect? t-rex-frame t-rex-bb 0 obstacle-frame obstacle-bb 0)
                        )))
               obstacles)))
 
@@ -310,7 +314,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
           dino--cloud-velociy (round (* *DINO--DEFAULT-CLOUD-VELOCITY* dino--difficulty-level))
           dino--obstacles-gap (cons (round (* (car *DINO--DEFAULT-OBSTACLES-GAP*) gap-coefficient))
                                     (round (* (cdr *DINO--DEFAULT-OBSTACLES-GAP*) gap-coefficient)))
-          t-rex-runningx-tween (tween-distinct-until-changed (tween-loop (tween (/ 0.3 dino--difficulty-level) 0 1 'linear))))))
+          t-rex-running-tween (tween-distinct-until-changed (tween-loop (tween (/ 0.3 dino--difficulty-level) 0 1 'linear))))))
 
 (defun dino-init ()
   "Init game-state."
@@ -400,7 +404,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
   (when (not (game-over? game-state))
     (dino--t-rex-duck! (nth 2 game-state))))
 
-(defun dino--handle-after-init (game-state _)
+(defun dino--handle-after-init (_ _)
   "Handle after init with GAME-STATE."
   (when (not (file-exists-p *DINO--HIGHEST-SCORE-FILE*))
     (write-region "0" nil *DINO--HIGHEST-SCORE-FILE*))
@@ -409,7 +413,7 @@ TILE-KINDS is the list of tile kinds that can be spawned"
                                (insert-file-contents *DINO--HIGHEST-SCORE-FILE*)
                                (buffer-string)))))
 
-(defun dino--handle-before-quit (game-state _)
+(defun dino--handle-before-quit (_ _)
   "Handle before quit with GAME-STATE."
   (write-region (number-to-string dino--highest-score) nil *DINO--HIGHEST-SCORE-FILE*))
 

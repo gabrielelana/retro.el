@@ -91,11 +91,11 @@ RESOLUTION is the resolution of the canvas as `(cons width height).
 BACKGROUND-COLOR is the default background color of the canvas.
 FRAMES-TO-RENDER are the number of frames to render in the bechmark."
   (let ((buffer-name "*benchmark-buffer-render*")
-         (current-window (selected-window))
-         (frame-counter 0)
-         (laps nil)
-         current-canvas
-         previous-canvas)
+        (current-window (selected-window))
+        (frame-counter 0)
+        (laps nil)
+        current-canvas
+        previous-canvas)
     (save-window-excursion
       (with-current-buffer (get-buffer-create buffer-name)
         (setq current-canvas (retro--init-canvas current-window

@@ -169,15 +169,16 @@ It will add COLOR to palette if not present."
 (defun retro--calibrate-canvas-in-window (width height window)
   "Return optimal size of pixel in WINDOW for canvas WIDTH x HEIGHT.
 
-We want to calculate the size in pixel of a single character
-coming from `retro-square-font-family (a pixel of our canvas) so
-that we will minimize the margin of the canvas with the wanted
-resolution in WINDOW."
-  (let* ((min-pixel-size 1)
-         (max-pixel-size 300)
-         (current-pixel-size nil)
-         (result nil)
-         (stop nil))
+We want to calculate the size in pixel of a single character coming from
+`retro-square-font-family (a pixel of our canvas) so that we will
+minimize the margin of the canvas with the wanted resolution in WINDOW."
+  (let ((window-width (window-body-width window t))
+        (window-height (window-body-height window t))
+        (min-pixel-size 1)
+        (max-pixel-size 300)
+        (current-pixel-size nil)
+        (result nil)
+        (stop nil))
     (while (not stop)
       (setq current-pixel-size (+ (/ (- max-pixel-size min-pixel-size) 2) min-pixel-size))
       (if (eq min-pixel-size max-pixel-size)
@@ -189,22 +190,24 @@ resolution in WINDOW."
           (set-face-attribute 'retro-default-face nil :height current-pixel-size)
           (buffer-face-set 'retro-default-face)
           ;; TODO (setq-local mode-line-format nil)
-          (let* ((window-width (window-body-width window t))
-                 (font-width (window-font-width window))
+          (let* (
+                 ;; (window-width (window-body-width window t))
+                 (font-width (window-font-width window 'retro-default-face))
                  ;; window-mode-line-height lies with doom-modeline
                  ;; TODO: remove this since we remove the modeline when we run?
-                 (mode-line-height (or (and (boundp 'doom-modeline-mode) doom-modeline-mode
-                                            (boundp 'doom-modeline-height) doom-modeline-height)
-                                       (window-mode-line-height window)))
-                 (window-height (- (window-body-height window t) (window-header-line-height window) mode-line-height))
-                 (font-height (window-font-height window))
+                 ;; (mode-line-height (or (and (boundp 'doom-modeline-mode) doom-modeline-mode
+                 ;;                            (boundp 'doom-modeline-height) doom-modeline-height)
+                 ;;                       (window-mode-line-height window)))
+                 ;; (window-height (- (window-body-height window t) (window-header-line-height window) mode-line-height))
+                 ;; (window-height (- (window-body-height window t) (window-header-line-height window)))
+                 (font-height (window-font-height window 'retro-default-face))
                  (n-columns (/ window-width font-width))
-                 (n-lines (floor (/ window-height font-height)))
+                 (n-lines (/ window-height font-height))
                  (waste (+ (- n-columns width) (- n-lines height))))
-            ;; (message "current-pixel-size: %S [%S, %S]" current-pixel-size min-pixel-size max-pixel-size)
-            ;; (message "n-columns: %S (< %S)" n-columns width)
-            ;; (message "n-lines: %S (< %S)" n-lines height)
-            ;; (message "waste: %S (< %S)" waste (and result (car result)))
+            (message "current-pixel-size: %S [%S, %S]" current-pixel-size min-pixel-size max-pixel-size)
+            (message "n-columns: %S (< %S)" n-columns width)
+            (message "n-lines: %S (< %S)" n-lines height)
+            (message "waste: %S (< %S)" waste (and result (car result)))
             (if (or (< n-columns width) (< n-lines height))
                 ;; current-pixel-size is too big
                 (setq max-pixel-size current-pixel-size)
@@ -252,7 +255,7 @@ if SWITCH-TO-BUFFER-P is t."
       ;; Buffer settings to not display text but display graphics
       (erase-buffer)
       (buffer-disable-undo)
-      (jit-lock-mode -1)
+      ;; (jit-lock-mode -1)
       (font-lock-mode -1)
       (mouse-wheel-mode -1)
       (auto-save-mode -1)
@@ -329,7 +332,7 @@ BACKGROUND-COLOR is the background color."
                   mode-line-format nil)
       (erase-buffer)
       (buffer-disable-undo)
-      (jit-lock-mode -1)
+      ;; (jit-lock-mode -1)
       (font-lock-mode -1)
       (mouse-wheel-mode -1)
       (auto-save-mode -1)
@@ -710,7 +713,7 @@ Colors should be specified as RGB hex string (ex. \"0xffffff\")
 - COLORS-MAP is a list of cons ((FROM-COLOR . TO-COLOR))"
   (let* ((to-font (retro--font-create :glyphs (ht-create)))
          (colors (mapcar (lambda (m) (cons (retro--add-color-to-palette (car m))
-                                          (retro--add-color-to-palette (cdr m))))
+                                           (retro--add-color-to-palette (cdr m))))
                          colors-map))
          (color-to-color (lambda (from-color)
                            (cdr (seq-find (lambda (m) (eq (car m) from-color)) colors (cons from-color from-color)))))
@@ -1142,53 +1145,53 @@ To do that wrap your update function with this function like
     (setq-local buffer-read-only nil)
     (catch 'stop
       (while (< i cl)
-       ;; line routine
-       (setq cpc ccc
-             ccc (aref cpxs i)
-             pcc (aref ppxs i))
-       ;; if previous canvas pixel and current canvas pixel are the same
-       (while (and (eq ccc pcc) (< column width))
-         ;; skip those pixels and do nothing, the current canvas is ok as it is
-         (setq i (1+ i)
-               column (1+ column)
-               cpc ccc)
-         (when (>= i cl)
-           (throw 'stop nil))
-         (setq ccc (aref cpxs i)
-               pcc (aref ppxs i)))
-       ;; start a stroke
-       (when (< column width)
-         (setq start column
-               length 1
-               i (1+ i)
-               column (1+ column)
-               cpc ccc)
-         (when (>= i cl)
-           (throw 'stop nil))
-         (setq ccc (aref cpxs i)))
-       ;; if previous pixel and current pixel are the same
-       (while (and (eq cpc ccc) (< column width))
-         ;; accumulate pixels in the current stroke
-         (setq i (1+ i)
-               column (1+ column)
-               length (1+ length)
-               cpc ccc)
-         (when (>= i cl)
-           (throw 'stop nil))
-         (setq ccc (aref cpxs i)))
-       ;; plot the stroke
-       (setq buffer-start (+ bbcll start)
-             buffer-end (+ buffer-start length))
-       (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc))
-       (setq length 0
-             start 0)
-       ;; next line
-       (when (>= column width)
-         (setq column 0
-               cpc nil
-               ccc nil
-               pcc nil
-               bbcll (+ bbcll bll)))))
+        ;; line routine
+        (setq cpc ccc
+              ccc (aref cpxs i)
+              pcc (aref ppxs i))
+        ;; if previous canvas pixel and current canvas pixel are the same
+        (while (and (eq ccc pcc) (< column width))
+          ;; skip those pixels and do nothing, the current canvas is ok as it is
+          (setq i (1+ i)
+                column (1+ column)
+                cpc ccc)
+          (when (>= i cl)
+            (throw 'stop nil))
+          (setq ccc (aref cpxs i)
+                pcc (aref ppxs i)))
+        ;; start a stroke
+        (when (< column width)
+          (setq start column
+                length 1
+                i (1+ i)
+                column (1+ column)
+                cpc ccc)
+          (when (>= i cl)
+            (throw 'stop nil))
+          (setq ccc (aref cpxs i)))
+        ;; if previous pixel and current pixel are the same
+        (while (and (eq cpc ccc) (< column width))
+          ;; accumulate pixels in the current stroke
+          (setq i (1+ i)
+                column (1+ column)
+                length (1+ length)
+                cpc ccc)
+          (when (>= i cl)
+            (throw 'stop nil))
+          (setq ccc (aref cpxs i)))
+        ;; plot the stroke
+        (setq buffer-start (+ bbcll start)
+              buffer-end (+ buffer-start length))
+        (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc))
+        (setq length 0
+              start 0)
+        ;; next line
+        (when (>= column width)
+          (setq column 0
+                cpc nil
+                ccc nil
+                pcc nil
+                bbcll (+ bbcll bll)))))
     (when (> length 0)
       (setq buffer-start (+ bbcll start)
             buffer-end (+ buffer-start length))

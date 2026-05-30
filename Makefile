@@ -5,7 +5,7 @@ CASK ?= cask
 
 SOURCE = $(shell ls *.el | grep -v retro-pkg.el)
 
-all: clean prepare test compile test clean
+all: clean prepare test compile
 
 prepare:
 	${CASK} install
