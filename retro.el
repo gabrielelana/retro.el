@@ -575,17 +575,46 @@ this color is not copied."
 
 (defun retro--plot-background (background canvas)
   "Plot BACKGROUND on CANVAS."
-  (retro--vector-clip-blit (retro-background-pixels background)
-                           (retro-background-clip-x background)
-                           0
-                           (1- (+ (retro-background-clip-x background) (retro-background-clip-width background)))
-                           (1- (retro-background-height background))
-                           (retro-background-width background)
-                           (retro-canvas-pixels canvas)
-                           (retro-background-x background)
-                           (retro-background-y background)
-                           (retro-canvas-width canvas)
-                           (retro-background-transparent-color background)))
+  ;; Clip the background against the canvas before blitting, like
+  ;; `retro--plot-tile'/`retro--plot-sprite'/`retro--plot-char' do.  Without
+  ;; this a background positioned partly (or wholly) outside the canvas drives
+  ;; the destination index past the end of the canvas pixel vector.
+  (let* ((cw (retro-canvas-width canvas))
+         (ch (retro-canvas-height canvas))
+         (bx (retro-background-x background))
+         (by (retro-background-y background))
+         (clip-x (retro-background-clip-x background))
+         (clip-width (retro-background-clip-width background))
+         (bh (retro-background-height background))
+         ;; coordinates are relative to canvas
+         (cl (cons 0 0))                ; canvas top left corner
+         (cr (cons (1- cw) (1- ch)))    ; canvas right bottom corner
+         (bl (cons bx by))              ; background top left corner
+         (br (cons (1- clip-width) (1- bh))) ; background (visible) right bottom corner
+         ;; coordinates of the intersection (canvas absolute)
+         (sx0 (max (car cl)
+                   (car bl)))
+         (sx1 (min (+ (car cl) (car cr))
+                   (+ (car bl) (car br))))
+         (sy0 (max (cdr cl)
+                   (cdr bl)))
+         (sy1 (min (+ (cdr cl) (cdr cr))
+                   (+ (cdr bl) (cdr br)))))
+    (when (and (<= sx0 sx1) (<= sy0 sy1))
+      (retro--vector-clip-blit (retro-background-pixels background)
+                               ;; convert the intersection to source coordinates:
+                               ;; the source x for canvas x is clip-x + (x - bx),
+                               ;; the source y for canvas y is (y - by)
+                               (+ clip-x (- sx0 bx))
+                               (- sy0 by)
+                               (+ clip-x (- sx1 bx))
+                               (- sy1 by)
+                               (retro-background-width background)
+                               (retro-canvas-pixels canvas)
+                               sx0
+                               sy0
+                               cw
+                               (retro-background-transparent-color background)))))
 
 
 ;;; Font
