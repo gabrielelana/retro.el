@@ -360,8 +360,6 @@ BACKGROUND-COLOR is the background color."
         (setq-local buffer-read-only t)
         canvas))))
 
-;;; TODO: inline
-;;; TODO: unroll?
 (defun retro--vector-clip-blit (sv sx0 sy0 sx1 sy1 sw dv dx dy dw tc)
   "Copy clip from source vector to destination vector.
 
@@ -375,23 +373,34 @@ destination vector.
 destination vector. DW is the width of the destination vector.
 - TC is the transparent color of the source vector, a pixel of
 this color is not copied."
+  ;; PERF: walk the clip as rows x columns so the inner loop is a plain
+  ;; counter.  The previous implementation computed `(% si sw)` on every
+  ;; pixel just to detect end-of-row; that integer division dominated the
+  ;; blit cost.  `speed 3' is the real win under native compilation; we keep
+  ;; full bounds checking (`safety 0' measured no faster here and array
+  ;; bounds checks are not what it elides anyway).
+  (declare (speed 3))
   (let* ((si (+ (* sy0 sw) sx0))        ; index in source vector
          (di (+ (* dy dw) dx))          ; index in destination vector
          (cw (1+ (- sx1 sx0)))          ; clip width
-         (sg (- sw cw))                 ; gap in source vector
-         (dg (- dw cw))                 ; gap in destination vector
-         (sie (+ (* sy1 sw) sx1))       ; index end in source vector
-         (sye (+ (1- cw) sx0))          ; last column (y) of the clip in source vector
-         (px nil))
-    (while (<= si sie)
-      (setq px (aref sv si))
-      (when (/= px tc)
-        (aset dv di px))
-      (if (= (% si sw) sye)
-          (setq si (+ si sg 1)
-                di (+ di dg 1))
+         (ch (1+ (- sy1 sy0)))          ; clip height
+         (sg (- sw cw))                 ; gap in source vector at end of row
+         (dg (- dw cw))                 ; gap in destination vector at end of row
+         (px nil)
+         (row 0)
+         (col 0))
+    (while (< row ch)
+      (setq col 0)
+      (while (< col cw)
+        (setq px (aref sv si))
+        (when (/= px tc)
+          (aset dv di px))
         (setq si (1+ si)
-              di (1+ di))))))
+              di (1+ di)
+              col (1+ col)))
+      (setq si (+ si sg)
+            di (+ di dg)
+            row (1+ row)))))
 
 (defun retro--flip-h-vector (vector width height)
   "Flip vector of pixels on horizontal axis."
@@ -1089,6 +1098,50 @@ To do that wrap your update function with this function like
 ;; TODO(OPT): always keep the canvas length
 ;; TODO(OPT): inheirth from special-mode
 
+(defcustom retro-gc-cons-threshold (* 256 1024 1024)
+  "Value of `gc-cons-threshold' to use while a game loop is running.
+
+A running game allocates small amounts every frame (timestamps,
+game state, glyph strings...).  Raising the threshold keeps the
+garbage collector from firing mid-frame, which is the main source
+of frame-time spikes.  The previous value is restored when the
+game quits or when it errors out."
+  :type 'integer
+  :group 'retro)
+
+(defcustom retro-gc-cons-percentage 0.6
+  "Value of `gc-cons-percentage' to use while a game loop is running.
+See `retro-gc-cons-threshold'; restored together with it."
+  :type 'number
+  :group 'retro)
+
+(defvar retro--saved-gc-cons-threshold nil
+  "Value of `gc-cons-threshold' saved before a game loop raised it.
+Non-nil only while a game has the GC settings raised.")
+
+(defvar retro--saved-gc-cons-percentage nil
+  "Value of `gc-cons-percentage' saved before a game loop raised it.")
+
+(defun retro--raise-gc ()
+  "Raise the GC settings for the duration of a game, saving the originals.
+The save is guarded so a second (overlapping) game cannot clobber the
+originals with already-raised values."
+  (unless retro--saved-gc-cons-threshold
+    (setq retro--saved-gc-cons-threshold gc-cons-threshold
+          retro--saved-gc-cons-percentage gc-cons-percentage))
+  (setq gc-cons-threshold retro-gc-cons-threshold
+        gc-cons-percentage retro-gc-cons-percentage))
+
+(defun retro--restore-gc ()
+  "Restore the GC settings saved by `retro--raise-gc'.
+Clears the save slots so the restore is idempotent (safe to call from
+both the normal quit path and the error handler)."
+  (when retro--saved-gc-cons-threshold
+    (setq gc-cons-threshold retro--saved-gc-cons-threshold
+          gc-cons-percentage retro--saved-gc-cons-percentage
+          retro--saved-gc-cons-threshold nil
+          retro--saved-gc-cons-percentage nil)))
+
 ;; TODO(OPT): extract current-canvas and previous-canvas from game-state,
 ;; make them local and pass them as call parameters, save time accessing
 ;; the game struct
@@ -1099,31 +1152,46 @@ To do that wrap your update function with this function like
          (elapsed (float-time (time-subtract now last-time)))
          (current-canvas (retro-game-current-canvas game))
          (previous-canvas (retro-game-previous-canvas game)))
-    (when (not game-state)
-      (setq game-state (funcall (retro-game-init game)))
-      (funcall (retro-game-after-init game) game-state game))
-    (retro--handle-pending-events game-state game)
-    (funcall (retro-game-update game) elapsed game-state current-canvas)
-    (funcall (retro-game-render game) elapsed game-state current-canvas)
-    (with-current-buffer (retro-game-buffer-name game)
-      (retro--buffer-render current-canvas previous-canvas))
-    (retro--reset-canvas previous-canvas)
-    (cl-rotatef (retro-game-current-canvas game) (retro-game-previous-canvas game))
-    (if (retro-game-quit-p game)
+    ;; The loop reschedules itself through `run-with-timer', so each frame
+    ;; runs in a fresh dynamic extent.  Wrap the body so that an error (or
+    ;; C-g) in any callback restores the GC settings and stops the loop
+    ;; instead of leaving the editor with GC effectively disabled.
+    (condition-case err
         (progn
-          (funcall (retro-game-before-quit game) game-state game)
-          (funcall (retro-game-quit game)))
-      (redisplay t)
-      (run-with-timer 0.001 nil 'retro--game-loop game game-state now)
-      ;; (garbage-collect-maybe 4)
-      ;; (garbage-collect)
-      t)))
+          (when (not game-state)
+            ;; PERF: keep the GC quiet for the duration of the game.
+            (retro--raise-gc)
+            (setq game-state (funcall (retro-game-init game)))
+            (funcall (retro-game-after-init game) game-state game))
+          (retro--handle-pending-events game-state game)
+          (funcall (retro-game-update game) elapsed game-state current-canvas)
+          (funcall (retro-game-render game) elapsed game-state current-canvas)
+          (with-current-buffer (retro-game-buffer-name game)
+            (retro--buffer-render current-canvas previous-canvas))
+          (retro--reset-canvas previous-canvas)
+          (cl-rotatef (retro-game-current-canvas game) (retro-game-previous-canvas game))
+          (if (retro-game-quit-p game)
+              (progn
+                (retro--restore-gc)
+                (funcall (retro-game-before-quit game) game-state game)
+                (funcall (retro-game-quit game))
+                (garbage-collect))
+            (redisplay t)
+            (run-with-timer 0.001 nil 'retro--game-loop game game-state now)
+            t))
+      ((error quit)
+       (retro--restore-gc)
+       (setf (retro-game-quit-p game) t)
+       (signal (car err) (cdr err))))))
 
 
 ;;; Buffer
 
 (defun retro--buffer-render (current-canvas previous-canvas)
   "Render CURRENT-CANVAS given PREVIOUS-CANVAS into current buffer."
+  ;; PERF: `speed 3' for the native compiler.  Bounds checking is kept on;
+  ;; the per-pixel `aref' reads are already provably in range (i < cl).
+  (declare (speed 3))
   (let* ((cpxs (retro-canvas-pixels current-canvas))
          (ppxs (retro-canvas-pixels previous-canvas))
          (width (retro-canvas-width current-canvas))
@@ -1141,8 +1209,10 @@ To do that wrap your update function with this function like
          (cpc nil)                      ; current-canvas previous color
          (ccc nil)                      ; current-canvas current color
          (pcc nil)                      ; previous-canvas current color
-         (i 0))
-    (setq-local buffer-read-only nil)
+         (i 0)
+         ;; PERF: bind once instead of toggling `buffer-read-only' on/off every
+         ;; frame (two `setq-local' that churn buffer-local state per render).
+         (inhibit-read-only t))
     (catch 'stop
       (while (< i cl)
         ;; line routine
@@ -1195,8 +1265,7 @@ To do that wrap your update function with this function like
     (when (> length 0)
       (setq buffer-start (+ bbcll start)
             buffer-end (+ buffer-start length))
-      (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc)))
-    (setq-local buffer-read-only t)))
+      (put-text-property buffer-start buffer-end 'face (aref retro-palette-faces cpc)))))
 
 
 
@@ -1218,6 +1287,7 @@ To do that wrap your update function with this function like
 
 \(X0, Y0) is the top left corner.
 \(X1, Y1) is the bottom right corner."
+  (declare (speed 3))
   (let ((pixels (retro-canvas-pixels canvas))
         (width (retro-canvas-width canvas)))
     (dotimes (dx (1+ (- x1 x0)))

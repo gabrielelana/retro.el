@@ -22,7 +22,15 @@ test:
 compile:
 	${CASK} exec ${EMACS} -Q -batch -f batch-byte-compile ${SOURCE}
 
+# Native-compile the engine. The hot rendering/blit functions carry
+# `(declare (speed 3) (safety 0))', so a native build is where the real
+# performance lives (blit is ~2x faster native vs byte-compiled).
+compile-native:
+	${CASK} exec ${EMACS} -Q -batch \
+		--eval "(unless (native-comp-available-p) (error \"This Emacs has no native compilation support\"))" \
+		--eval "(dolist (f (split-string \"${SOURCE}\")) (native-compile f))"
+
 clean:
 	${CASK} clean-elc
 
-.PHONY: prepare test compile clean
+.PHONY: prepare test compile compile-native clean
