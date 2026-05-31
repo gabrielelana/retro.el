@@ -235,31 +235,34 @@ TILE-KINDS is the list of tile kinds that can be spawned"
 (defun collision? (t-rex obstacles obstacles-assets)
   "Collision between T-REX and OBSTACLES for OBSTACLES-ASSETS."
   (let ((t-rex-bb (retro-bb-sprite t-rex))
-        ;; (t-rex-frame (retro-sprite-frame t-rex))
-        )
+        (t-rex-frame (retro-sprite-frame t-rex))
+        (t-rex-tc (retro-play-transparent-color (retro-sprite-current-play t-rex))))
     (seq-some (lambda (obstacle)
                 (let* ((obstacle-kind (car obstacle))
                        (obstacle-coordinates (cdr obstacle))
                        (obstacle-asset (car (ht-get obstacles-assets obstacle-kind)))
                        obstacle-bb
-                       ;; obstacle-frame
-                       )
+                       obstacle-frame
+                       obstacle-tc)
                   (when (retro-tile-p obstacle-asset)
                     (setq obstacle-bb (cons obstacle-coordinates
                                             (cons (1- (+ (car obstacle-coordinates) (retro-tile-width obstacle-asset)))
                                                   (1- (+ (cdr obstacle-coordinates) (retro-tile-height obstacle-asset)))))
-                          ;; obstacle-frame (retro-tile-pixels obstacle-asset)
-                          ))
+                          obstacle-frame (retro-tile-pixels obstacle-asset)
+                          obstacle-tc (retro-tile-transparent-color obstacle-asset)))
                   (when (retro-sprite-p obstacle-asset)
                     (setq obstacle-bb (cons obstacle-coordinates
                                             (cons (1- (+ (car obstacle-coordinates) (retro-sprite-width obstacle-asset)))
                                                   (1- (+ (cdr obstacle-coordinates) (retro-sprite-height obstacle-asset)))))
-                          ;; obstacle-frame (retro-sprite-frame obstacle-asset)
-                          ))
+                          obstacle-frame (retro-sprite-frame obstacle-asset)
+                          obstacle-tc (retro-play-transparent-color (retro-sprite-current-play obstacle-asset))))
+                  ;; broad phase: cheap bounding-box test; narrow phase: exact
+                  ;; pixel-perfect test (avoids stopping the game when only the
+                  ;; sprites' transparent margins overlap)
                   (and (>= (retro-bb-right t-rex-bb) (retro-bb-left obstacle-bb))
                        (retro-bb-intersect? t-rex-bb obstacle-bb)
-                       ;; (retro-pp-intersect? t-rex-frame t-rex-bb 0 obstacle-frame obstacle-bb 0)
-                       )))
+                       (retro-pp-intersect? t-rex-frame t-rex-bb t-rex-tc
+                                            obstacle-frame obstacle-bb obstacle-tc))))
               obstacles)))
 
 ;;; ============================================================================

@@ -61,7 +61,7 @@
   :group 'retro-mode)
 
 ;; (defvar retro-square-font-family "Topaz-8"
-;   "Font family used to create the illusion of pixels.")
+                                        ;   "Font family used to create the illusion of pixels.")
 
 
 ;;; Palette
@@ -807,7 +807,7 @@ Colors should be specified as RGB hex string (ex. \"0xffffff\")
 
 (defmacro retro-sprite-frame (sprite)
   `(aref (retro-play-frames (retro-sprite-current-play ,sprite))
-         (retro-play-frame-i (retro-sprite-current-play ,sprite))))
+    (retro-play-frame-i (retro-sprite-current-play ,sprite))))
 
 (defmacro retro-sset (struct-type field-name struct-value field-value)
   `(setf (,(intern (format "%s-%s" (symbol-name struct-type) (symbol-name field-name))) ,struct-value) ,field-value))
@@ -1385,9 +1385,9 @@ is `(cons (cons ,x1 ,y1) (cons ,x2 ,y2)).
 xxx...
 x....2"
   `(cons (cons (retro-sprite-x ,sprite)
-               (retro-sprite-y ,sprite))
-         (cons (1- (+ (retro-sprite-x ,sprite) (retro-sprite-width ,sprite)))
-               (1- (+ (retro-sprite-y ,sprite) (retro-sprite-height ,sprite))))))
+          (retro-sprite-y ,sprite))
+    (cons (1- (+ (retro-sprite-x ,sprite) (retro-sprite-width ,sprite)))
+     (1- (+ (retro-sprite-y ,sprite) (retro-sprite-height ,sprite))))))
 
 (defun retro-bb-intersect? (bbl bbr)
   "Check if bounding box BBL and bounding box BBR intersect."
@@ -1457,10 +1457,12 @@ canvas's boundig box CANVANS-BB."
             (pr (retro-canvas-bb-clip cr cr-bb bb))
             (cl-p nil)
             (cr-p nil)
-            (width (retro-bb-width bb))
+            ;; `pl' and `pr' hold the WHOLE intersection (width * height),
+            ;; row-major.  Scan all of it.
+            (length (retro-bb-length bb))
             (index 0)
             (collide nil))
-        (while (and (not collide) (< index width))
+        (while (and (not collide) (< index length))
           (setq cl-p (aref pl index)
                 cr-p (aref pr index)
                 collide (and (not (eq cl-tc cl-p))

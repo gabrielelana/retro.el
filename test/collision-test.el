@@ -200,6 +200,56 @@
     (should (eq 't (retro-pp-intersect? cl cl-bb cl-tc
                                         cr cr-bb cr-tc)))))
 
+;; NOTE: every test above has an intersection that is exactly ONE row tall, so
+;; they cannot catch a pixel-perfect check that only scans the first row of the
+;; overlap.  The tests below use multi-row intersections on purpose.
+
+(defvar shape-bottom-bar
+  (vector 0 0 0
+          0 0 0
+          1 1 1)
+  "Representation.
+000
+000
+111")
+
+(defvar shape-left-bar
+  (vector 1 0 0
+          1 0 0
+          1 0 0)
+  "Representation.
+100
+100
+100")
+
+(defvar shape-right-bar
+  (vector 0 0 1
+          0 0 1
+          0 0 1)
+  "Representation.
+001
+001
+001")
+
+(ert-deftest test-intersect-pp-multi-row-collide ()
+  "Two identical, fully superimposed shapes must collide even when the
+first row of their (multi-row) overlap is empty.
+000
+000
+1*1"
+  (let ((bb (cons (cons 0 0) (cons 2 2))))
+    (should (eq 't (retro-pp-intersect? shape-bottom-bar bb 0
+                                        shape-bottom-bar bb 0)))))
+
+(ert-deftest test-intersect-pp-multi-row-no-collide ()
+  "Interleaved columns never coincide across the whole multi-row overlap.
+100   001
+100   001
+100   001"
+  (let ((bb (cons (cons 0 0) (cons 2 2))))
+    (should (eq nil (retro-pp-intersect? shape-left-bar bb 0
+                                         shape-right-bar bb 0)))))
+
 (provide 'collision-test)
 
 ;; Local Variables:
